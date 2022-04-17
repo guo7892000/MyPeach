@@ -48,7 +48,6 @@ public abstract class AbstractSqlParser {
     protected StringBuilder sbHead = new StringBuilder();//头部字符构建者
     protected StringBuilder sbTail = new StringBuilder();//尾部字符构建者
     protected SqlTypeEnum sqlTypeEnum;
-    ParserResult result;
 
     /***
      * 构造函数：初始化所有变量
@@ -77,7 +76,6 @@ public abstract class AbstractSqlParser {
         mapSqlKey = new HashMap<>();
         mapSqlKeyValid = new HashMap<>();
         mapError = new HashMap<>();
-        result = new ParserResult();
     }
 
     /**
@@ -117,8 +115,7 @@ public abstract class AbstractSqlParser {
         }
 
         if(mapError.size()>0){
-            ParserResult.fail("部分非空键（"+String.join(",",mapError.keySet())+"）没有传入值，已退出！",mapError);
-            return result;
+            return ParserResult.fail("部分非空键（"+String.join(",",mapError.keySet())+"）没有传入值，已退出！",mapError);
         }
 
         //3、得到符合左右括号正则式的内容，并替换为类似：##序号##格式，方便先从大方面分析结构，之后再取出括号里的内容来进一步分析
