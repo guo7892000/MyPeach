@@ -36,7 +36,8 @@ public class InsertSqlParser extends AbstractSqlParser {
 
     @Override
     public void headSqlConvert(String sSql){
-        Pattern regex = Pattern.compile(sInsertIntoPattern);//抽取出INSERT INTO TABLE_NAME(部分
+        //1、抽取出INSERT INTO TABLE_NAME(部分
+        Pattern regex = Pattern.compile(sInsertIntoPattern);
         Matcher mc = regex.matcher(sSql);
         while (mc.find()){
             sbHead.append(mc.group());//不变的INSERT INTO TABLE_NAME(部分先加入
@@ -44,6 +45,7 @@ public class InsertSqlParser extends AbstractSqlParser {
             //log.debug("Remove INSERT INTO TABLE_NAME(:",sSql);
         }
 
+        //2、判断是否insert into ... values形式
         boolean insertValuesFlag = false;
         regex = Pattern.compile(sValuesPattern);//先根据VALUES关键字将字符分隔为两部分
         mc = regex.matcher(sSql);
@@ -57,6 +59,7 @@ public class InsertSqlParser extends AbstractSqlParser {
         }
 
         if(insertValuesFlag){
+            //3、 insert into ... values形式
             String[] colArray = sInsert.split(",");
             String[] paramArray = sPara.split(",");
 
@@ -79,6 +82,7 @@ public class InsertSqlParser extends AbstractSqlParser {
                 sbTail.append(")");
             }
         } else {
+            //4、INSERT INTO TABLE_NAME 。。 SELECT形式
             regex = Pattern.compile("\\s*\\)\\s+SELECT\\s+");//抽取出INSERT INTO TABLE_NAME(部分
             mc = regex.matcher(sSql);
             while (mc.find()){

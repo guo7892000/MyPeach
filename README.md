@@ -47,13 +47,15 @@ mypeach.target-sql-param-type-enum=param
 mypeach.key-style=pound_sign_around
 mypeach.param-prefix=@
 mypeach.param-suffix=
-3.使用：
+3.使用：键字符支持'#MDLIST:N:LS:#'格式，其中N表示非空，LS表示字符列表，即IN括号里的部分字符，他可以传入数组或ArrayList。LI为整型列表，值两边不加引号。
     3.1 自动注入对象
+    ```
     String testFilePrefix = "src/main/resources/sql/";
     @Autowired
     SelectSqlParser selectSqlParser;方式一
     @Autowired
     SqlParsers sqlParsers;//方式二
+    ```
 
     3.2 方法调用
     public String selecet() throws IOException {

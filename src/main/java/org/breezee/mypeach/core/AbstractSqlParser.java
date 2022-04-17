@@ -60,15 +60,19 @@ public abstract class AbstractSqlParser {
         if(prop.getKeyStyle()== SqlKeyStyleEnum.POUND_SIGN_BRACKETS){
             keyPrefix = StaticConstants.HASH_LEFT_BRACE;
             keySuffix = StaticConstants.RIGHT_BRACE;
+
+            //还要支持类似：AND MODIFIER IN ('#MDLIST:N:LS:L-S#')的键
+            keyPattern = "'?%?\\#\\{\\w+(:\\w+(-\\w+)?)*\\}%?'?";//键正则式，注这里针对#{}都要加上转义符，否则会报错！！
         }else {
             keyPrefix = StaticConstants.HASH;
             keySuffix = StaticConstants.HASH;
+            //还要支持类似：AND MODIFIER IN ('#MDLIST:N:LS:L-S#')的键
+            keyPattern = "'?%?"+ keyPrefix +"\\w+(:\\w+(-\\w+)?)*"+ keySuffix +"%?'?";//键正则式
         }
         if(parenthesesRoundKey.equals(keyPrefix)){
             parenthesesRoundKey+=StaticConstants.HASH;
         }
-        //还要支持类似：AND MODIFIER IN ('#MDLIST:N:LS:L-S#')的键
-        keyPattern = "'?%?"+ keyPrefix +"\\w+(:\\w+(-\\w+)?)*"+ keySuffix +"%?'?";//键正则式
+
         mapsParentheses = new HashMap<>();
         mapSqlKey = new HashMap<>();
         mapSqlKeyValid = new HashMap<>();
@@ -249,8 +253,15 @@ public abstract class AbstractSqlParser {
         while (mc.find()) {
             //2、得到一个AND或OR段
             String oneSql = sCond.substring(iStart,mc.start());
-            if(hasKey(oneSql)) {
-                //2.1、当键存在时，调用括号键转换处理方法
+            //查看是否有：##序号##
+            boolean parenthesesRounFlag = false;//没有
+            Pattern regex2 = Pattern.compile(parenthesesRoundKey + "\\d+" + parenthesesRoundKey,CASE_INSENSITIVE);
+            Matcher mc2 = regex2.matcher(oneSql);
+            if(mc2.find()){
+                parenthesesRounFlag = true;
+            }
+            if(hasKey(oneSql) || parenthesesRounFlag) {
+                //2.1、当键存在，或存在：##序号##时，调用括号键转换处理方法
                 parenthesesKeyConvert(oneSql, sBeforeAndOr);
             }else {
                 //2.2、当键存在时，调用括号键转换处理方法
@@ -541,7 +552,14 @@ public abstract class AbstractSqlParser {
         String[] sSelectItemArray = sSql.split(",");
         String sComma="";
         for (String col:sSelectItemArray) {
-            if(!hasKey(col)){
+            //查看是否有：##序号##
+            boolean parenthesesRounFlag = false;//没有
+            Pattern regex = Pattern.compile(parenthesesRoundKey + "\\d+" + parenthesesRoundKey,CASE_INSENSITIVE);
+            Matcher mc = regex.matcher(col);
+            if(mc.find()){
+                parenthesesRounFlag = true;
+            }
+            if(!hasKey(col) && !parenthesesRounFlag){
                 sbHead.append(sComma + col);
                 sComma = ",";
                 continue;

@@ -45,6 +45,32 @@ public class AutoSqlAnalyzerTest {
     }
 
     @Test
+    void selecet2() throws IOException {
+        String sSql = new String(Files.readAllBytes(Paths.get(testFilePrefix + "01_Select2.txt")));
+        Map<String, Object> dicQuery = new HashMap<>();
+        dicQuery.put("PROVINCE_ID","张三");
+        dicQuery.put("PROVINCE_CODE","BJ");
+        dicQuery.put("PROVINCE_NAME","北京");
+        dicQuery.put("DATE","20222-02-10");
+        dicQuery.put("NAME",1);
+        dicQuery.put("REMARK","测试");
+        //dicQuery.put("BF","back");
+        //dicQuery.put("MDLIST",new String[]{"SE","PA","FI"});//传入一个数组
+//        List<String> list = new ArrayList<String>();
+//        list.add("'SE'");
+//        list.add("VE");
+//        list.add("UC");
+
+        List<Integer> list = new ArrayList<Integer>();
+        list.addAll(Arrays.asList(2,3,4));
+        dicQuery.put("MDLIST",list);//传入一个数组
+        SelectSqlParser sqlAnalyzer = new SelectSqlParser(new MyPeachProperties());
+        ParserResult result = sqlAnalyzer.parse(sSql, dicQuery);
+        System.out.println(result.getMessage());
+        System.out.println(result.getSql());
+    }
+
+    @Test
     void insert() throws IOException {
         String sSql = new String(Files.readAllBytes(Paths.get(testFilePrefix + "02_Insert.txt")));
         Map<String, Object> dicQuery = new HashMap<>();
