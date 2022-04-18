@@ -28,27 +28,31 @@ public class UpdateSqlParser extends AbstractSqlParser {
     String sSetEqualPattern = "\\s*,\\s*?(\\[|`)?\\w+(]|`)";//正则式：set段中的赋值部分
 
     @Override
-    public void headSqlConvert(String sSql) {
+    public String headSqlConvert(String sSql) {
+        StringBuilder sb = new StringBuilder();
         Pattern regex = Pattern.compile(sUpdateSetPattern);//先截取UPDATE SET部分
         Matcher mc = regex.matcher(sSql);
         while (mc.find()){
-            sbHead.append(mc.group());//不变的UPDATE SET部分先加入
+            sb.append(mc.group());//不变的UPDATE SET部分先加入
             sSql = sSql.substring(mc.end()).trim();
-            fromSqlConvert(sSql);
+            //调用From方法
+            sb.append(fromSqlConvert(sSql));
         }
+        return sb.toString();
     }
 
-    protected void beforeFromConvert(String sSql){
+    protected String beforeFromConvert(String sSql){
+        StringBuilder sb = new StringBuilder();
         String[] sSetArray = sSql.split(",");
         String sComma="";
         for (String col:sSetArray) {
             if(!hasKey(col)){
-                sbHead.append(sComma + col);
+                sb.append(sComma + col);
                 sComma = ",";
                 continue;
             }
 
-            parenthesesKeyConvert(sComma + col,"");
+            sb.append(parenthesesKeyConvert(sComma + col,""));
 
             if(sComma.isEmpty()){
                 String sKey = getFirstKeyName(col);
@@ -57,6 +61,7 @@ public class UpdateSqlParser extends AbstractSqlParser {
                 }
             }
         }
+        return sb.toString();
     }
 
 }

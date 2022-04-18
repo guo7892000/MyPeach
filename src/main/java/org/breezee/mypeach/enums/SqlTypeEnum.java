@@ -14,9 +14,17 @@ public enum SqlTypeEnum {
      */
     SELECT,
     /**
-     * 新增语句
+     * WITH AS SELECT查询语句
      */
-    INSERT,
+    SELECT_WITH_AS,
+    /**
+     * 新增语句(INSERT INTO... VALUES...)
+     */
+    INSERT_VALUES,
+    /**
+     * 新增语句(INSERT INTO... SELECT...)
+     */
+    INSERT_SELECT,
     /**
      * 更新语句
      */

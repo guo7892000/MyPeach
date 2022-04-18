@@ -25,17 +25,21 @@ public class DeleteSqlParser extends AbstractSqlParser {
     }
 
     @Override
-    public void headSqlConvert(String sSql) {
+    public String headSqlConvert(String sSql) {
+        StringBuilder sb = new StringBuilder();
         Pattern regex = Pattern.compile(sDeletePattern);//抽取出INSERT INTO TABLE_NAME(部分
         Matcher mc = regex.matcher(sSql);
         while (mc.find()){
-            sbHead.append(mc.group());//不变的INSERT INTO TABLE_NAME(部分先加入
-            fromSqlConvert(sSql.substring(mc.end()));
+            sb.append(mc.group());//不变的INSERT INTO TABLE_NAME(部分先加入
+            //FROM部分SQL处理
+            sb.append(fromSqlConvert(sSql.substring(mc.end())));
         }
+        return sb.toString();
     }
 
     @Override
-    protected void beforeFromConvert(String sSql) {
-
+    protected String beforeFromConvert(String sSql) {
+        return "";
     }
+
 }

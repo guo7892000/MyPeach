@@ -31,11 +31,13 @@ public class InsertSqlParser extends AbstractSqlParser {
 
     public InsertSqlParser(MyPeachProperties properties) {
         super(properties);
-        sqlTypeEnum = SqlTypeEnum.INSERT;
+        sqlTypeEnum = SqlTypeEnum.INSERT_VALUES;
     }
 
     @Override
-    public void headSqlConvert(String sSql){
+    public String headSqlConvert(String sSql){
+        StringBuilder sbHead = new StringBuilder();
+        StringBuilder sbTail = new StringBuilder();
         //1、抽取出INSERT INTO TABLE_NAME(部分
         Pattern regex = Pattern.compile(sInsertIntoPattern);
         Matcher mc = regex.matcher(sSql);
@@ -86,25 +88,32 @@ public class InsertSqlParser extends AbstractSqlParser {
             regex = Pattern.compile("\\s*\\)\\s+SELECT\\s+");//抽取出INSERT INTO TABLE_NAME(部分
             mc = regex.matcher(sSql);
             while (mc.find()){
+                sqlTypeEnum = SqlTypeEnum.INSERT_SELECT;
                 sInsert = sSql.substring(0,mc.start()) + mc.group();
                 sbHead.append(sInsert);//不变的INSERT INTO TABLE_NAME(部分先加入
                 sSql = sSql.substring(mc.end()).trim();
-                fromSqlConvert(sSql);
+                //FROM段处理
+                sbHead.append(fromSqlConvert(sSql));
             }
         }
+        return sbHead.toString()+sbTail.toString();
     }
 
     @Override
-    protected void beforeFromConvert(String sSql) {
+    protected String beforeFromConvert(String sSql) {
+        StringBuilder sbHead = new StringBuilder();
         String[] colArray = sSql.split(",");
         for (int i = 0; i < colArray.length; i++) {
-            if(i==0){
-                parenthesesKeyConvert(colArray[i]," ");
-            } else {
-                parenthesesKeyConvert(colArray[i],",");
-            }
+            String sLastAndOr = i==0 ? "":",";
+            String colString = parenthesesKeyConvert(colArray[i],sLastAndOr);
 
+            if(sqlTypeEnum == SqlTypeEnum.INSERT_SELECT && ToolHelper.IsNull(colString)){
+                String sKeyName = getFirstKeyName(colArray[i]);
+                mapError.put(sKeyName,"SELECT中的查询项"+sKeyName+"，其值必须转入，不能为空！");
+            }
+            sbHead.append(colString);
         }
+        return sbHead.toString();
     }
 
 }

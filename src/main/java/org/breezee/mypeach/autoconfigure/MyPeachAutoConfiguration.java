@@ -1,6 +1,10 @@
 package org.breezee.mypeach.autoconfigure;
 
-import org.breezee.mypeach.core.*;
+import org.breezee.mypeach.core.SqlParsers;
+import org.breezee.mypeach.core.DeleteSqlParser;
+import org.breezee.mypeach.core.InsertSqlParser;
+import org.breezee.mypeach.core.SelectSqlParser;
+import org.breezee.mypeach.core.UpdateSqlParser;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

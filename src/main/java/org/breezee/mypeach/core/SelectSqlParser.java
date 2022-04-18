@@ -31,10 +31,10 @@ public class SelectSqlParser extends AbstractSqlParser {
     }
 
     @Override
-    protected void headSqlConvert(String sSql) {
+    protected String headSqlConvert(String sSql) {
         sSql = OracleWithSelectConvert(sSql);
         //通用的以Select开头的处理
-        queryHeadSqlConvert(sSql);
+        return queryHeadSqlConvert(sSql);
     }
 
     /**
@@ -43,14 +43,16 @@ public class SelectSqlParser extends AbstractSqlParser {
      * @return
      */
     private String OracleWithSelectConvert(String sSql) {
+        StringBuilder sbHead = new StringBuilder();
         Pattern regex = Pattern.compile(sOracleWithSelectPartn,CASE_INSENSITIVE);
         Matcher mc = regex.matcher(sSql);
         int iStart = 0;
         while (mc.find()) {
+            sqlTypeEnum = SqlTypeEnum.SELECT_WITH_AS;
             String sOneSql = sSql.substring(iStart,mc.start()).trim();
             if(ToolHelper.IsNotNull(sOneSql)){
                 //通用的以Select开头的处理
-                queryHeadSqlConvert(sOneSql);
+                sbHead.append(queryHeadSqlConvert(sOneSql));
             }
             sbHead.append(mc.group());
             iStart = mc.end();
@@ -63,17 +65,20 @@ public class SelectSqlParser extends AbstractSqlParser {
             while (mc.find()) {
                 String sOneSql = sSql.substring(0,mc.start()).trim();
                 //通用的以Select开头的处理
-                queryHeadSqlConvert(sOneSql);
+                sbHead.append(queryHeadSqlConvert(sOneSql));
+
                 sSql = sSql.substring(mc.end() - mc.group().length() + 1).trim();
                 sbHead.append(")" + System.lineSeparator());
             }
+            return sbHead.toString();
         }
         return sSql;
     }
 
     @Override
-    protected void beforeFromConvert(String sSql) {
-        queryBeforeFromConvert(sSql);
+    protected String beforeFromConvert(String sSql) {
+        return queryBeforeFromConvert(sSql);
     }
+
 
 }

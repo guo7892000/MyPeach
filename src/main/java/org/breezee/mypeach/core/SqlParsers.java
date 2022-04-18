@@ -30,17 +30,20 @@ public class SqlParsers {
      * @param dic   SQL语句中键的值
      * @return 根据传入的动态条件转换为动态的SQL
      */
-    public ParserResult getSql(SqlTypeEnum sqlType, String sSql, Map<String, Object> dic){
+    public ParserResult parse(SqlTypeEnum sqlType, String sSql, Map<String, Object> dic){
         switch (sqlType){
-            case INSERT:
+            case INSERT_VALUES:
+            case INSERT_SELECT:
                 return new InsertSqlParser(properties).parse(sSql,dic);
             case UPDATE:
                 return new UpdateSqlParser(properties).parse(sSql,dic);
             case DELETE:
                 return new DeleteSqlParser(properties).parse(sSql,dic);
             case SELECT:
+            case SELECT_WITH_AS:
             default:
                 return new SelectSqlParser(properties).parse(sSql,dic);
         }
     }
+
 }
