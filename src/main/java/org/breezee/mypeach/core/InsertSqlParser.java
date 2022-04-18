@@ -2,7 +2,6 @@ package org.breezee.mypeach.core;
 
 import lombok.extern.slf4j.Slf4j;
 import org.breezee.mypeach.autoconfigure.MyPeachProperties;
-import org.breezee.mypeach.config.StaticConstants;
 import org.breezee.mypeach.enums.SqlTypeEnum;
 import org.breezee.mypeach.utils.ToolHelper;
 
@@ -24,10 +23,6 @@ public class InsertSqlParser extends AbstractSqlParser {
 
     String sValuesPattern = "\\)\\s*VALUES\\s*\\(\\s*"; //正则式：)VALUES(
     String sInsertIntoPattern = "^INSERT\\s+INTO\\s+\\S+\\s*\\(\\s*";//正则式：INSERT INTO TABLE_NAME(
-    //数据库列名：[列A]、`列B`
-    String ParaEndfix = "\\s*(\\[|`)?\\w+[\\]`]?,?" + StaticConstants.remarkPatter;
-    String colParaFirst = "\\("+ ParaEndfix;//首列
-    String colParaComma = "," + ParaEndfix;//其他列
 
     public InsertSqlParser(MyPeachProperties properties) {
         super(properties);

@@ -32,9 +32,11 @@ public class SelectSqlParser extends AbstractSqlParser {
 
     @Override
     protected String headSqlConvert(String sSql) {
-        sSql = OracleWithSelectConvert(sSql);
+        StringBuilder sbHead = new StringBuilder();
+        sSql = OracleWithSelectConvert(sSql,sbHead);
         //通用的以Select开头的处理
-        return queryHeadSqlConvert(sSql);
+        sbHead.append(queryHeadSqlConvert(sSql));
+        return sbHead.toString();
     }
 
     /**
@@ -42,8 +44,8 @@ public class SelectSqlParser extends AbstractSqlParser {
      * @param sSql
      * @return
      */
-    private String OracleWithSelectConvert(String sSql) {
-        StringBuilder sbHead = new StringBuilder();
+    private String OracleWithSelectConvert(String sSql,StringBuilder sbHead) {
+
         Pattern regex = Pattern.compile(sOracleWithSelectPartn,CASE_INSENSITIVE);
         Matcher mc = regex.matcher(sSql);
         int iStart = 0;
@@ -70,7 +72,6 @@ public class SelectSqlParser extends AbstractSqlParser {
                 sSql = sSql.substring(mc.end() - mc.group().length() + 1).trim();
                 sbHead.append(")" + System.lineSeparator());
             }
-            return sbHead.toString();
         }
         return sSql;
     }
