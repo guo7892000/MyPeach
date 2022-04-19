@@ -1,12 +1,12 @@
 package org.breezee.mypeach;
 
 import org.breezee.mypeach.autoconfigure.MyPeachProperties;
-import org.breezee.mypeach.core.DeleteSqlParser;
-import org.breezee.mypeach.core.InsertSqlParser;
-import org.breezee.mypeach.core.SelectSqlParser;
-import org.breezee.mypeach.core.UpdateSqlParser;
+import org.breezee.mypeach.core.*;
 import org.breezee.mypeach.entity.ParserResult;
+import org.breezee.mypeach.enums.SqlTypeEnum;
+import org.breezee.mypeach.enums.TargetSqlParamTypeEnum;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.IOException;
@@ -18,6 +18,9 @@ import java.util.*;
 public class AutoSqlParseTest {
     String testFilePrefix = "src/test/java/org/breezee/mypeach/";
 
+    @Autowired
+    SqlParsers sqlParsers;
+
     @Test
     void selecet() throws IOException {
         String sSql = new String(Files.readAllBytes(Paths.get(testFilePrefix + "01_Select.txt")));
@@ -26,7 +29,7 @@ public class AutoSqlParseTest {
         dicQuery.put("#PROVINCE_CODE#","BJ");
         dicQuery.put("#PROVINCE_NAME#","北京");
         dicQuery.put("#DATE#","20222-02-10");
-        dicQuery.put("NAME",1);
+        //dicQuery.put("NAME",1);
         dicQuery.put("#REMARK#","测试");
         //dicQuery.put("BF","back");
         //dicQuery.put("MDLIST",new String[]{"SE","PA","FI"});//传入一个数组
@@ -38,8 +41,9 @@ public class AutoSqlParseTest {
         List<Integer> list = new ArrayList<Integer>();
         list.addAll(Arrays.asList(2,3,4));
         dicQuery.put("MDLIST",list);//传入一个数组
-        SelectSqlParser sqlAnalyzer = new SelectSqlParser(new MyPeachProperties());
-        ParserResult result = sqlAnalyzer.parse(sSql, dicQuery);
+        //SelectSqlParser sqlAnalyzer = new SelectSqlParser(new MyPeachProperties());
+        //sqlParsers.properties.setTargetSqlParamTypeEnum(TargetSqlParamTypeEnum.DIRECT_RUN);//改变SQL生成方式
+        ParserResult result = sqlParsers.parse(SqlTypeEnum.SELECT,sSql, dicQuery);
         System.out.println(result.getMessage());
         System.out.println(result.getSql());
     }
@@ -64,10 +68,10 @@ public class AutoSqlParseTest {
         List<Integer> list = new ArrayList<Integer>();
         list.addAll(Arrays.asList(2,3,4));
         dicQuery.put("MDLIST",list);//传入一个数组
-        SelectSqlParser sqlAnalyzer = new SelectSqlParser(new MyPeachProperties());
-        ParserResult result = sqlAnalyzer.parse(sSql, dicQuery);
-        System.out.println(result.getMessage());
-        System.out.println(result.getSql());
+        //SelectSqlParser sqlAnalyzer = new SelectSqlParser(new MyPeachProperties());
+        ParserResult result = sqlParsers.parse(SqlTypeEnum.SELECT,sSql, dicQuery);
+
+        System.out.println(result.getCode().equals("0")?result.getSql():result.getMessage());//0转换成功，返回SQL；1转换失败，返回错误信息
     }
 
     @Test
@@ -79,10 +83,9 @@ public class AutoSqlParseTest {
         dicQuery.put("#PROVINCE_NAME#","北京");
         //dicQuery.put("#SORT_ID#",1);
         //dicQuery.put("#TFLAG#",1);
-        InsertSqlParser sqlAnalyzer = new InsertSqlParser(new MyPeachProperties());
-        ParserResult result = sqlAnalyzer.parse(sSql, dicQuery);
-        System.out.println(result.getMessage());
-        System.out.println(result.getSql());
+        //InsertSqlParser sqlAnalyzer = new InsertSqlParser(new MyPeachProperties());
+        ParserResult result = sqlParsers.parse(SqlTypeEnum.INSERT_VALUES,sSql, dicQuery);
+        System.out.println(result.getCode().equals("0")?result.getSql():result.getMessage());//0转换成功，返回SQL；1转换失败，返回错误信息
     }
 
     @Test
@@ -93,10 +96,9 @@ public class AutoSqlParseTest {
         dicQuery.put("#PROVINCE_CODE#","BJ");
         //dicQuery.put("#PROVINCE_NAME#","北京");
         dicQuery.put("#TFLG#",1);
-        UpdateSqlParser sqlAnalyzer = new UpdateSqlParser(new MyPeachProperties());
-        ParserResult result = sqlAnalyzer.parse(sSql, dicQuery);
-        System.out.println(result.getMessage());
-        System.out.println(result.getSql());
+        //UpdateSqlParser sqlAnalyzer = new UpdateSqlParser(new MyPeachProperties());
+        ParserResult result = sqlParsers.parse(SqlTypeEnum.UPDATE,sSql, dicQuery);
+        System.out.println(result.getCode().equals("0")?result.getSql():result.getMessage());//0转换成功，返回SQL；1转换失败，返回错误信息
     }
 
     @Test
@@ -107,10 +109,9 @@ public class AutoSqlParseTest {
         dicQuery.put("#PROVINCE_CODE#","BJ");
         dicQuery.put("#PROVINCE_NAME#","北京");
         dicQuery.put("#SORT_ID#",1);
-        DeleteSqlParser sqlAnalyzer = new DeleteSqlParser(new MyPeachProperties());
-        ParserResult result = sqlAnalyzer.parse(sSql, dicQuery);
-        System.out.println(result.getMessage());
-        System.out.println(result.getSql());
+        //DeleteSqlParser sqlAnalyzer = new DeleteSqlParser(new MyPeachProperties());
+        ParserResult result = sqlParsers.parse(SqlTypeEnum.DELETE,sSql, dicQuery);
+        System.out.println(result.getCode().equals("0")?result.getSql():result.getMessage());//0转换成功，返回SQL；1转换失败，返回错误信息
     }
 
     @Test
@@ -122,10 +123,9 @@ public class AutoSqlParseTest {
         //dicQuery.put("#PROVINCE_NAME#","北京");
         dicQuery.put("#SORT_ID#",1);//必须
         dicQuery.put("#TFLAG#",1);
-        InsertSqlParser sqlAnalyzer = new InsertSqlParser(new MyPeachProperties());
-        ParserResult result = sqlAnalyzer.parse(sSql, dicQuery);
-        System.out.println(result.getMessage());
-        System.out.println(result.getSql());
+        //InsertSqlParser sqlAnalyzer = new InsertSqlParser(new MyPeachProperties());
+        ParserResult result = sqlParsers.parse(SqlTypeEnum.INSERT_SELECT,sSql, dicQuery);
+        System.out.println(result.getCode().equals("0")?result.getSql():result.getMessage());//0转换成功，返回SQL；1转换失败，返回错误信息
     }
 
     @Test
@@ -139,9 +139,8 @@ public class AutoSqlParseTest {
         dicQuery.put("NAME",1);
         dicQuery.put("#REMARK#","测试");
         //dicQuery.put("BF","back");
-        SelectSqlParser sqlAnalyzer = new SelectSqlParser(new MyPeachProperties());
-        ParserResult result = sqlAnalyzer.parse(sSql, dicQuery);
-        System.out.println(result.getMessage());
-        System.out.println(result.getSql());
+        //SelectSqlParser sqlAnalyzer = new SelectSqlParser(new MyPeachProperties());
+        ParserResult result = sqlParsers.parse(SqlTypeEnum.SELECT_WITH_AS,sSql, dicQuery);
+        System.out.println(result.getCode().equals("0")?result.getSql():result.getMessage());//0转换成功，返回SQL；1转换失败，返回错误信息
     }
 }

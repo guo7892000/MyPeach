@@ -3,6 +3,7 @@ package org.breezee.mypeach.core;
 import lombok.extern.slf4j.Slf4j;
 import org.breezee.mypeach.autoconfigure.MyPeachProperties;
 import org.breezee.mypeach.enums.SqlTypeEnum;
+import org.breezee.mypeach.utils.ToolHelper;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -27,8 +28,7 @@ public class DeleteSqlParser extends AbstractSqlParser {
     @Override
     public String headSqlConvert(String sSql) {
         StringBuilder sb = new StringBuilder();
-        Pattern regex = Pattern.compile(sDeletePattern);//抽取出INSERT INTO TABLE_NAME(部分
-        Matcher mc = regex.matcher(sSql);
+        Matcher mc = ToolHelper.getMatcher(sSql, sDeletePattern);//抽取出INSERT INTO TABLE_NAME(部分
         while (mc.find()){
             sb.append(mc.group());//不变的INSERT INTO TABLE_NAME(部分先加入
             //FROM部分SQL处理

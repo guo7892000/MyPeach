@@ -3,6 +3,7 @@ package org.breezee.mypeach.core;
 import lombok.extern.slf4j.Slf4j;
 import org.breezee.mypeach.autoconfigure.MyPeachProperties;
 import org.breezee.mypeach.enums.SqlTypeEnum;
+import org.breezee.mypeach.utils.ToolHelper;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -30,8 +31,7 @@ public class UpdateSqlParser extends AbstractSqlParser {
     @Override
     public String headSqlConvert(String sSql) {
         StringBuilder sb = new StringBuilder();
-        Pattern regex = Pattern.compile(sUpdateSetPattern);//先截取UPDATE SET部分
-        Matcher mc = regex.matcher(sSql);
+        Matcher mc = ToolHelper.getMatcher(sSql, sUpdateSetPattern);//先截取UPDATE SET部分
         while (mc.find()){
             sb.append(mc.group());//不变的UPDATE SET部分先加入
             sSql = sSql.substring(mc.end()).trim();

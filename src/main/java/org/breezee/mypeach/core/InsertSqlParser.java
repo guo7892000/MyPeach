@@ -34,8 +34,7 @@ public class InsertSqlParser extends AbstractSqlParser {
         StringBuilder sbHead = new StringBuilder();
         StringBuilder sbTail = new StringBuilder();
         //1、抽取出INSERT INTO TABLE_NAME(部分
-        Pattern regex = Pattern.compile(sInsertIntoPattern);
-        Matcher mc = regex.matcher(sSql);
+        Matcher mc = ToolHelper.getMatcher(sSql, sInsertIntoPattern);
         while (mc.find()){
             sbHead.append(mc.group());//不变的INSERT INTO TABLE_NAME(部分先加入
             sSql = sSql.substring(mc.end()).trim();
@@ -44,8 +43,7 @@ public class InsertSqlParser extends AbstractSqlParser {
 
         //2、判断是否insert into ... values形式
         boolean insertValuesFlag = false;
-        regex = Pattern.compile(sValuesPattern);//先根据VALUES关键字将字符分隔为两部分
-        mc = regex.matcher(sSql);
+        mc = ToolHelper.getMatcher(sSql, sValuesPattern);//先根据VALUES关键字将字符分隔为两部分
         String sInsert ="";
         String sPara="";
         while (mc.find()){
@@ -80,8 +78,7 @@ public class InsertSqlParser extends AbstractSqlParser {
             }
         } else {
             //4、INSERT INTO TABLE_NAME 。。 SELECT形式
-            regex = Pattern.compile("\\s*\\)\\s+SELECT\\s+");//抽取出INSERT INTO TABLE_NAME(部分
-            mc = regex.matcher(sSql);
+            mc = ToolHelper.getMatcher(sSql, "\\s*\\)\\s+SELECT\\s+");//抽取出INSERT INTO TABLE_NAME(部分
             while (mc.find()){
                 sqlTypeEnum = SqlTypeEnum.INSERT_SELECT;
                 sInsert = sSql.substring(0,mc.start()) + mc.group();
