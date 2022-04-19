@@ -16,7 +16,7 @@ import java.util.Map;
  */
 public class SqlParsers {
 
-    private MyPeachProperties properties;
+    public MyPeachProperties properties;
 
     //构造函数
     public SqlParsers(MyPeachProperties prop){

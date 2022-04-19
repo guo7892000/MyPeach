@@ -45,9 +45,7 @@ public class SelectSqlParser extends AbstractSqlParser {
      * @return
      */
     private String OracleWithSelectConvert(String sSql,StringBuilder sbHead) {
-
-        Pattern regex = Pattern.compile(sOracleWithSelectPartn,CASE_INSENSITIVE);
-        Matcher mc = regex.matcher(sSql);
+        Matcher mc = ToolHelper.getMatcher(sSql, sOracleWithSelectPartn);
         int iStart = 0;
         while (mc.find()) {
             sqlTypeEnum = SqlTypeEnum.SELECT_WITH_AS;
@@ -62,8 +60,7 @@ public class SelectSqlParser extends AbstractSqlParser {
         if(iStart>0) {
             sSql = sSql.substring(iStart).trim();//去掉之前处理过的部分
             //匹配【)SELECT】部分
-            regex = Pattern.compile(sOracleWithSelectPartnToSelect,CASE_INSENSITIVE);
-            mc = regex.matcher(sSql);
+            mc = ToolHelper.getMatcher(sSql, sOracleWithSelectPartnToSelect);
             while (mc.find()) {
                 String sOneSql = sSql.substring(0,mc.start()).trim();
                 //通用的以Select开头的处理

@@ -4,6 +4,11 @@ import org.breezee.mypeach.autoconfigure.MyPeachProperties;
 import org.breezee.mypeach.config.StaticConstants;
 import org.breezee.mypeach.enums.SqlKeyStyleEnum;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static java.util.regex.Pattern.CASE_INSENSITIVE;
+
 /**
  * @objectName: 工具辅助类
  * @description:
@@ -60,5 +65,16 @@ public class ToolHelper {
      */
     public static String getTargetParamName(String sParamName, MyPeachProperties prop){
         return prop.getParamPrefix() + getKeyName(sParamName, prop) + prop.getParamSuffix();
+    }
+
+    /**
+     * 获取匹配对象
+     * @param sSql 要匹配的SQL
+     * @param sPattern 匹配的正则式
+     * @return
+     */
+    public static Matcher getMatcher(String sSql, String sPattern) {
+        Pattern regexInner = Pattern.compile(sPattern, CASE_INSENSITIVE);//先根据WHERE关键字将字符分隔为两部分
+        return regexInner.matcher(sSql);
     }
 }

@@ -39,6 +39,7 @@ public abstract class AbstractSqlParser {
      *
      */
     private String parenthesesRoundKey = "##";
+    private String parenthesesRoundKeyPattern = parenthesesRoundKey + "\\d+" + parenthesesRoundKey;
 
     protected Map<String, SqlKeyValueEntity> mapSqlKey;//SQL中所有键
     protected Map<String, SqlKeyValueEntity> mapSqlKeyValid;//SQL中有传值的所有键
@@ -87,8 +88,8 @@ public abstract class AbstractSqlParser {
         sSql = sSql.trim().toUpperCase();//将SQL转换为大写
 
         //1、删除所有注释，降低分析难度，提高准确性
-        Pattern regex = Pattern.compile(StaticConstants.remarkPatter,CASE_INSENSITIVE);//Pattern：explanatory note
-        Matcher mc = regex.matcher(sSql);
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.remarkPatter);
+        Pattern regex;
         while (mc.find()) {
             sSql = sSql.replace(mc.group(),"");//删除所有注释
         }
@@ -115,8 +116,7 @@ public abstract class AbstractSqlParser {
         }
 
         //3、得到符合左右括号正则式的内容，并替换为类似：##序号##格式，方便先从大方面分析结构，之后再取出括号里的内容来进一步分析
-        regex = Pattern.compile(sParenthesesPattern,CASE_INSENSITIVE);//Pattern：Parentheses
-        mc = regex.matcher(sSql);
+        mc = ToolHelper.getMatcher(sSql, sParenthesesPattern);
         int iStart = 0;
         while (mc.find()) {
             String sKey = parenthesesRoundKey + String.valueOf(iStart) + parenthesesRoundKey;
@@ -153,8 +153,7 @@ public abstract class AbstractSqlParser {
         String sFromWhere = "";
 
         //分隔FROM段
-        Pattern regex = Pattern.compile(StaticConstants.fromPattern, CASE_INSENSITIVE);//根据FROM关键字将字符分隔为两部分
-        Matcher mc = regex.matcher(sSql);
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.fromPattern);
         boolean isDealWhere = false;//是否处理过WHERE语句
         while (mc.find()) {
             //一、FROM及之后WHERE端的处理
@@ -166,8 +165,7 @@ public abstract class AbstractSqlParser {
             sb.append(mc.group());//sbHead添加FROM字符
 
             //2、WHERE段分隔
-            Pattern regexInner = Pattern.compile(StaticConstants.wherePattern,CASE_INSENSITIVE);//先根据WHERE关键字将字符分隔为两部分
-            Matcher mcWhere = regexInner.matcher(sFromWhere);
+            Matcher mcWhere = ToolHelper.getMatcher(sFromWhere, StaticConstants.wherePattern);
             while (mcWhere.find()) {
                 //3、FROM段的处理
                 String sFrom = sFromWhere.substring(0,mcWhere.start());
@@ -183,8 +181,7 @@ public abstract class AbstractSqlParser {
                 }
 
                 //4 通过各种Join正则式分解语句
-                Pattern regex2 = Pattern.compile("\\s*((LEFT)|(RIGHT)|(FULL)|(INNER))?\\s+JOIN\\s*",CASE_INSENSITIVE);
-                Matcher mc2 = regex2.matcher(sFrom);
+                Matcher mc2 = ToolHelper.getMatcher(sFrom, "\\s*((LEFT)|(RIGHT)|(FULL)|(INNER))?\\s+JOIN\\s*");
                 int iStart2=0;
                 String lastJoin = "";//最后一次JOIN语句的字符，这个在while循环外处理最后一段字符时用到
                 while (mc2.find()) {
@@ -222,8 +219,7 @@ public abstract class AbstractSqlParser {
 
         if(!isDealWhere){
             //二、 如果语句中没有FROM语句，那会直接进入
-            Pattern regexInner = Pattern.compile(StaticConstants.wherePattern,CASE_INSENSITIVE);//先根据WHERE关键字将字符分隔为两部分
-            Matcher mcWhere = regexInner.matcher(sSql);
+            Matcher mcWhere = ToolHelper.getMatcher(sSql, StaticConstants.wherePattern);
             while (mcWhere.find()) {
                 String sWhereString = mcWhere.group();
                 sb.append(sWhereString);
@@ -239,6 +235,8 @@ public abstract class AbstractSqlParser {
         return sb.toString();
     }
 
+
+
     /**
      * AND和OR的条件转换处理
      * @param sCond 例如：PROVINCE_ID = '#PROVINCE_ID#' AND UPDATE_CONTROL_ID= '#UPDATE_CONTROL_ID#'
@@ -246,8 +244,7 @@ public abstract class AbstractSqlParser {
     protected String andOrConditionConvert(String sCond) {
         StringBuilder sb = new StringBuilder();
         //1、按AND（OR）正则式匹配
-        Pattern regex = Pattern.compile(StaticConstants.andOrPatter, CASE_INSENSITIVE);
-        Matcher mc = regex.matcher(sCond);
+        Matcher mc = ToolHelper.getMatcher(sCond, StaticConstants.andOrPatter);
         int iStart = 0;
         String sBeforeAndOr = "";
         while (mc.find()) {
@@ -255,8 +252,7 @@ public abstract class AbstractSqlParser {
             String oneSql = sCond.substring(iStart,mc.start());
             //查看是否有：##序号##
             boolean parenthesesRounFlag = false;//没有
-            Pattern regex2 = Pattern.compile(parenthesesRoundKey + "\\d+" + parenthesesRoundKey,CASE_INSENSITIVE);
-            Matcher mc2 = regex2.matcher(oneSql);
+            Matcher mc2 = ToolHelper.getMatcher(oneSql, parenthesesRoundKeyPattern);
             if(mc2.find()){
                 parenthesesRounFlag = true;
             }
@@ -285,8 +281,7 @@ public abstract class AbstractSqlParser {
     protected String parenthesesKeyConvert(String sSql, String sLastAndOr){
         StringBuilder sb = new StringBuilder();
         //1、分析是否有包含 ##序号## 正则式的字符
-        Pattern regex = Pattern.compile(parenthesesRoundKey + "\\d+" + parenthesesRoundKey,CASE_INSENSITIVE);
-        Matcher mc = regex.matcher(sSql);
+        Matcher mc = ToolHelper.getMatcher(sSql, parenthesesRoundKeyPattern);
         if(!mc.find()){
             //没找到时，直接调用单个键转换
             return singleKeyConvert(sLastAndOr + sSql);//退出本次处理
@@ -307,8 +302,7 @@ public abstract class AbstractSqlParser {
 
         //判断是否所有键为空
         boolean allKeyNull = true;
-        Pattern regex1 = Pattern.compile(keyPattern,CASE_INSENSITIVE);
-        Matcher mc1 = regex1.matcher(sSource);
+        Matcher mc1 = ToolHelper.getMatcher(sSource, keyPattern);
         while (mc1.find()){
             if(ToolHelper.IsNotNull(singleKeyConvert(mc1.group()))){
                 allKeyNull =false;
@@ -319,15 +313,15 @@ public abstract class AbstractSqlParser {
         String sEnd = sSql.substring(mc.end());
         //3、子查询处理
         String sChildQuery = childQueryConvert(sLastAndOr + sPre, sEnd, sSource,allKeyNull);
+        sb.append(sChildQuery);//加上子查询
         if(allKeyNull || ToolHelper.IsNotNull(sChildQuery)){
-            return "";//如果全部参数为空，或者子查询已处理，直接返回
+            return sb.toString();//如果全部参数为空，或者子查询已处理，直接返回
         }
         //4、有键值传入，并且非子查询，做AND或OR正则匹配分拆字符
         sb.append(sLastAndOr + sSql.replace(mc.group(),""));//因为不能移除"()"，所以这里先拼接收"AND"或"OR"
         //AND或OR正则匹配处理
         // 注：此处虽然与【andOrConditionConvert】有点类似，但有不同，不能将以下代码替换为andOrConditionConvert方法调用
-        Pattern regex2 = Pattern.compile(StaticConstants.andOrPatter,CASE_INSENSITIVE);
-        Matcher mc2 = regex2.matcher(sSource);
+        Matcher mc2 = ToolHelper.getMatcher(sSource, StaticConstants.andOrPatter);
         int iStart = 0;
         String beforeAndOr = "";
         boolean bFirst = true;
@@ -356,9 +350,8 @@ public abstract class AbstractSqlParser {
      */
     private String childQueryConvert(String sPre, String sEnd, String sSource,boolean allParamEmpty) {
         StringBuilder sb = new StringBuilder();
-        //1、判断是否有子查询
-        Pattern regexChild = Pattern.compile("\\(SELECT\\s+");//抽取出子查询的 (SELECT 部分
-        Matcher mcChild = regexChild.matcher(sSource);
+        //1、判断是否有子查询:抽取出子查询的 (SELECT 部分
+        Matcher mcChild = ToolHelper.getMatcher(sSource, "\\(SELECT\\s+");
         if (!mcChild.find()) {
             return "";//没有子查询，返回空
         }
@@ -385,8 +378,7 @@ public abstract class AbstractSqlParser {
         /** 4、子查询又相当于一个SELECT语句，这里又存在FROM和WHERE处理，所以这部分是根据SELECT模式，再解析一次。
         *   这就是为何将queryHeadSqlConvert和queryBeforeFromConvert放在本抽象父类的缘故。
         */
-        regexChild = Pattern.compile(StaticConstants.selectPattern);//抽取出SELECT部分
-        mcChild = regexChild.matcher(sSource);
+        mcChild = ToolHelper.getMatcher(sSource, StaticConstants.selectPattern);//抽取出SELECT部分
         while (mcChild.find()) {
             //4.1 调用查询头部转换方法
             sb.append(queryHeadSqlConvert(sSource));
@@ -468,8 +460,7 @@ public abstract class AbstractSqlParser {
      * @return
      */
     protected String singleKeyConvert(String sSql){
-        Pattern regex = Pattern.compile(keyPattern,CASE_INSENSITIVE);//AND条件处理
-        Matcher mc = regex.matcher(sSql);
+        Matcher mc = ToolHelper.getMatcher(sSql, keyPattern);
         while (mc.find()){
             String sKey = ToolHelper.getKeyName(mc.group(), myPeachProp);
             if(!mapSqlKeyValid.containsKey(sKey)){
@@ -498,8 +489,7 @@ public abstract class AbstractSqlParser {
      * @return 例如：'%#CITY_NAME#%'
      */
     protected String getFirstKeyString(String sSql){
-        Pattern regex = Pattern.compile(keyPattern,CASE_INSENSITIVE);
-        Matcher mc = regex.matcher(sSql);
+        Matcher mc = ToolHelper.getMatcher(sSql, keyPattern);
         if (mc.find()) {
             return mc.group();
         }else {
@@ -523,8 +513,7 @@ public abstract class AbstractSqlParser {
      * @return
      */
     protected boolean hasKey(String sSql){
-        Pattern regex = Pattern.compile(keyPattern,CASE_INSENSITIVE);//AND条件处理
-        Matcher mc = regex.matcher(sSql);
+        Matcher mc = ToolHelper.getMatcher(sSql, keyPattern);
         boolean hasPara = false;
         while (mc.find()) {
             hasPara = true;
@@ -540,8 +529,7 @@ public abstract class AbstractSqlParser {
      */
     protected String queryHeadSqlConvert(String sSql) {
         StringBuilder sb = new StringBuilder();
-        Pattern regex = Pattern.compile(StaticConstants.selectPattern);//抽取出SELECT部分
-        Matcher mc = regex.matcher(sSql);
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.selectPattern);//抽取出SELECT部分
         while (mc.find()){
             sb.append(mc.group());//不变的SELECT部分先加入
             sSql = sSql.substring(mc.end()).trim();
@@ -562,8 +550,7 @@ public abstract class AbstractSqlParser {
         for (String col:sSelectItemArray) {
             //查看是否有：##序号##
             boolean parenthesesRounFlag = false;//没有
-            Pattern regex = Pattern.compile(parenthesesRoundKey + "\\d+" + parenthesesRoundKey,CASE_INSENSITIVE);
-            Matcher mc = regex.matcher(col);
+            Matcher mc = ToolHelper.getMatcher(col, parenthesesRoundKeyPattern);
             if(mc.find()){
                 parenthesesRounFlag = true;
             }
