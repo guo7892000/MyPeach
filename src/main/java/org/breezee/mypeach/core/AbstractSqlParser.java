@@ -111,6 +111,10 @@ public abstract class AbstractSqlParser {
             }
         }
 
+        if(mapSqlKey.size()==0){
+            return ParserResult.fail("SQL中没有发现键，当前键配置样式为："+keyPrefix +"key"+ keySuffix+"，请修改配置或SQL。已退出！",mapError);
+        }
+
         if(mapError.size()>0){
             return ParserResult.fail("部分非空键（"+String.join(",",mapError.keySet())+"）没有传入值，已退出！",mapError);
         }
@@ -258,7 +262,7 @@ public abstract class AbstractSqlParser {
             }
             if(hasKey(oneSql) || parenthesesRounFlag) {
                 //2.1、当键存在，或存在：##序号##时，调用括号键转换处理方法
-                sb.append(parenthesesKeyConvert(oneSql, sBeforeAndOr));
+                sb.append(complexParenthesesKeyConvert(oneSql, sBeforeAndOr));
             }else {
                 //2.2、当键存在时，调用括号键转换处理方法
                 sb.append(sBeforeAndOr + oneSql);
@@ -267,24 +271,25 @@ public abstract class AbstractSqlParser {
             iStart = mc.end();
         }
         //最后一个AND或OR之后的的SQL字符串处理，也是调用括号键转换处理方法
-        sb.append(parenthesesKeyConvert(sCond.substring(iStart),sBeforeAndOr));
+        sb.append(complexParenthesesKeyConvert(sCond.substring(iStart),sBeforeAndOr));
 
         return sb.toString();
     }
 
     /**
-     * 括号键转换处理：
+     * 复杂的括号键转换处理：
      *  之前为了降低复杂度，将包含()的子查询或函数替换为##序号##，这里需要取出来分析
      * @param sSql 包含##序号##的SQL
      * @param sLastAndOr 上次处理中最后的那个AND或OR字符
      */
-    protected String parenthesesKeyConvert(String sSql, String sLastAndOr){
+    protected String complexParenthesesKeyConvert(String sSql, String sLastAndOr){
         StringBuilder sb = new StringBuilder();
+        String sValue = "";
         //1、分析是否有包含 ##序号## 正则式的字符
         Matcher mc = ToolHelper.getMatcher(sSql, parenthesesRoundKeyPattern);
         if(!mc.find()){
-            //没找到时，直接调用单个键转换
-            return singleKeyConvert(sLastAndOr + sSql);//退出本次处理
+            //没有双括号，但可能存在单括号，如是要修改为1=1或AND 1=1 的形式
+            return parenthesesConvert(sSql, sLastAndOr);
         }
 
         //2、有 ##序号## 字符的语句分析
@@ -312,7 +317,7 @@ public abstract class AbstractSqlParser {
         String sPre = sSql.substring(0, mc.start());
         String sEnd = sSql.substring(mc.end());
         //3、子查询处理
-        String sChildQuery = childQueryConvert(sLastAndOr + sPre, sEnd, sSource,allKeyNull);
+        String sChildQuery = childQueryConvert(sLastAndOr + sPre, sEnd, sSource);
         sb.append(sChildQuery);//加上子查询
         if(allKeyNull || ToolHelper.IsNotNull(sChildQuery)){
             return sb.toString();//如果全部参数为空，或者子查询已处理，直接返回
@@ -324,20 +329,64 @@ public abstract class AbstractSqlParser {
         Matcher mc2 = ToolHelper.getMatcher(sSource, StaticConstants.andOrPatter);
         int iStart = 0;
         String beforeAndOr = "";
-        boolean bFirst = true;
         while (mc2.find()){
             //4.1 存在AND或OR
             String sOne = sSource.substring(iStart,mc2.start()).trim();
-            //复杂的包含左右括号的SQL段转换（非子查询）
-            sb.append(conplexParenthesesConvert(sOne,beforeAndOr,bFirst));
+            //【括号SQL段转换方法】
+            sValue = parenthesesConvert(sOne,beforeAndOr);
+            sb.append(sValue);
             iStart = mc2.end();
             beforeAndOr = mc2.group();
-            bFirst = false;
         }
-        //4.2 最后一个AND或OR之后的的SQL字符串处理，也是调用【复杂的包含左右括号的SQL段转换（非子查询）】方法
-        sb.append(conplexParenthesesConvert(beforeAndOr + sSource.substring(iStart),"",bFirst));
+        //4.2 最后一个AND或OR之后的的SQL字符串处理，也是调用【括号SQL段转换方法】
+        sValue = parenthesesConvert(sSource.substring(iStart),beforeAndOr);
+        sb.append(sValue);
 
         return sb.toString();
+    }
+
+    /**
+     * 括号的SQL段转换(注：已经过AND或OR拆分，只含一个键)
+     *  例如( ( CREATOR = '#CREATOR#' OR CREATOR_ID = #CREATOR_ID# ) AND TFLG = '#TFLG#')
+     * @param sSql 只有一个key的字符（即已经过AND或OR的正则表达式匹配后分拆出来的部分字符）
+     * @param sLastAndOr 前一个拼接的AND或OR字符
+     */
+    private String parenthesesConvert(String sSql, String sLastAndOr) {
+        //1、剔除开头的一个或多个左括号，并且把这些左括号记录到变量中，方便后面拼接
+        String sOne = sSql;
+        String sStartsParentheses="";
+        while (sOne.startsWith("(")){ //remvoe the start position of string "("
+            sStartsParentheses += "(";
+            sOne = sOne.substring(1).trim();
+        }
+
+        //2、剔除结尾处的一个或多个括号，并将它记录到变量中，方便后面拼接
+        String sEndRight = "";
+        int leftCount = sOne.length() - sOne.replace("(","").length();//left Parentheses count
+        long rightCount = sOne.length() - sOne.replace(")","").length();//right Parentheses count
+
+        if(leftCount != rightCount){
+            while (rightCount-leftCount>0){
+                sEndRight+=")";
+                sOne = sOne.substring(0,sOne.length()-1).trim();
+                rightCount--;
+            }
+        }
+
+        String sParmFinal = singleKeyConvert(sOne);//有括号也一并去掉了
+        if(ToolHelper.IsNull(sParmFinal)){
+            //没有键值传入
+            if(ToolHelper.IsNotNull(sStartsParentheses) || ToolHelper.IsNotNull(sEndRight)){
+                //有左或右括号时，就替换为AND 1=1
+                sLastAndOr = sLastAndOr.replace("OR","AND");
+                return sLastAndOr + sStartsParentheses + " 1=1 " + sEndRight;
+            }
+            return "";//没有括号时返回空，即可以直接去掉
+        }
+        else {
+            return sLastAndOr + sStartsParentheses + sParmFinal + sEndRight;//有键值传入
+        }
+
     }
 
     /**
@@ -345,10 +394,9 @@ public abstract class AbstractSqlParser {
      * @param sPre 前缀
      * @param sEnd 后缀
      * @param sSource ##序号##的具体内容
-     * @param allParamEmpty 所有键是否为空
      * @return
      */
-    private String childQueryConvert(String sPre, String sEnd, String sSource,boolean allParamEmpty) {
+    private String childQueryConvert(String sPre, String sEnd, String sSource) {
         StringBuilder sb = new StringBuilder();
         //1、判断是否有子查询:抽取出子查询的 (SELECT 部分
         Matcher mcChild = ToolHelper.getMatcher(sSource, "\\(SELECT\\s+");
@@ -386,72 +434,6 @@ public abstract class AbstractSqlParser {
         sb.append(sEndRight);//追加右括号
         sb.append(sEnd);//追加 ##序号## 之后部分字符
         return sb.toString(); //返回子查询已处理
-    }
-
-    /**
-     * 复杂的包含左右括号的SQL段转换（非子查询），例如( ( CREATOR = '#CREATOR#' OR CREATOR_ID = #CREATOR_ID# ) AND TFLG = '#TFLG#')
-     * @param sOne 只有一个key的字符（即已经过AND或OR的正则表达式匹配后分拆出来的部分字符）
-     * @param beforeAndOr 前一个拼接的AND或OR字符
-     * @param bFirst 是否第一次接拼
-     */
-    private String conplexParenthesesConvert(String sOne,String beforeAndOr,boolean bFirst) {
-        StringBuilder sb = new StringBuilder();
-        //1、剔除开头的一个或多个左括号，并且把这些左括号记录到变量中，方便后面拼接
-        String sStartsParentheses="";
-        while (sOne.startsWith("(")){ //remvoe the start position of string "("
-            sStartsParentheses += "(";
-            sOne = sOne.substring(1).trim();
-        }
-
-        //2、剔除结尾处的一个或多个括号，并将它记录到变量中，方便后面拼接
-        String sEndRight = "";
-        int leftCount = sOne.length() - sOne.replace("(","").length();//left Parentheses count
-        long rightCount = sOne.length() - sOne.replace(")","").length();//right Parentheses count
-
-        if(leftCount != rightCount){
-            while (rightCount-leftCount>0){
-                sEndRight+=")";
-                sOne = sOne.substring(0,sOne.length()-1).trim();
-                rightCount--;
-            }
-        }
-
-        //3、判断键是否有传值
-        String keyString = getFirstKeyString(sOne);
-        String keyName = ToolHelper.getKeyName(keyString, myPeachProp);//根据键字符得到键名
-        if(!mapSqlKeyValid.containsKey(keyName)){
-            //3.1 没有传值
-            String sCon = "";//
-            if(bFirst){
-                //3.1.1 第一次拼妆：当没有左括号时，直接取 1=1 ，否则在 1=1 前面还要加上左括号变量(包含一个或多个左括号)
-                sCon = sStartsParentheses.isEmpty()? " 1=1 ": " " + sStartsParentheses + " 1=1 ";//
-            } else {
-                //3.1.2 非第一次拼妆：当没有左括号时，直接取 AND 1=1 ，否则在AND 与 1=1 之间要加上左括号变量(包含一个或多个左括号)
-                //注：对于没有键值传进来的参数会统一修改为：AND 1=1，即使之前为OR连接条件。因为OR 1=1会查询全部数据，这样就会导致很多错误的数据被更新！！这里很好避免了这个问题^_^
-                sCon = sStartsParentheses.isEmpty()? " AND 1=1 ": " AND " + sStartsParentheses + " 1=1 ";//
-            }
-            sb.append(sCon + sEndRight);
-        }else {
-            //3.2 有传值
-            SqlKeyValueEntity entity = mapSqlKeyValid.get(keyName);
-            String sList = entity.getKeyMoreInfo().getStringList();
-            String sKeyValue;
-            if(ToolHelper.IsNotNull(sList)){
-                //3.2.1、替换IN的字符串
-                sKeyValue = sOne.replace(keyString, sList);
-            } else if(myPeachProp.getTargetSqlParamTypeEnum() == TargetSqlParamTypeEnum.Param){
-                //3.2.2、得到参数化的SQL语句
-                sKeyValue = sOne.replace(keyString,ToolHelper.getTargetParamName(keyName, myPeachProp));
-            }else {
-                //3.2.3、得到替换键后只有值的SQL语句
-                String sValue = String.valueOf(entity.getReplaceKeyWithValue());
-                sKeyValue = sOne.replace(keyString,sValue);
-            }
-            String sAndOr = beforeAndOr + sStartsParentheses + sKeyValue + sEndRight;
-            sb.append(sAndOr);
-        }
-
-        return sb.toString();
     }
 
     /****
@@ -560,7 +542,7 @@ public abstract class AbstractSqlParser {
                 continue;
             }
             //括号转换处理
-            String colString = parenthesesKeyConvert(sComma + col,"");
+            String colString = complexParenthesesKeyConvert(sComma + col,"");
             sb.append(colString);
             //第一个有效元素后的元素前要加逗号：查询的字段应该是不能去掉的，回头这再看看？？？
             if(sComma.isEmpty()){

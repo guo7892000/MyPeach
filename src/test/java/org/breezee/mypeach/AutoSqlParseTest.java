@@ -3,6 +3,7 @@ package org.breezee.mypeach;
 import org.breezee.mypeach.autoconfigure.MyPeachProperties;
 import org.breezee.mypeach.core.*;
 import org.breezee.mypeach.entity.ParserResult;
+import org.breezee.mypeach.enums.SqlKeyStyleEnum;
 import org.breezee.mypeach.enums.SqlTypeEnum;
 import org.breezee.mypeach.enums.TargetSqlParamTypeEnum;
 import org.junit.jupiter.api.Test;
@@ -29,7 +30,8 @@ public class AutoSqlParseTest {
         dicQuery.put("#PROVINCE_CODE#","BJ");
         dicQuery.put("#PROVINCE_NAME#","北京");
         dicQuery.put("#DATE#","20222-02-10");
-        //dicQuery.put("NAME",1);
+        dicQuery.put("NAME",1);
+        dicQuery.put("TFLG",1);
         dicQuery.put("#REMARK#","测试");
         //dicQuery.put("BF","back");
         //dicQuery.put("MDLIST",new String[]{"SE","PA","FI"});//传入一个数组
@@ -69,6 +71,7 @@ public class AutoSqlParseTest {
         list.addAll(Arrays.asList(2,3,4));
         dicQuery.put("MDLIST",list);//传入一个数组
         //SelectSqlParser sqlAnalyzer = new SelectSqlParser(new MyPeachProperties());
+        //sqlParsers.properties.setKeyStyle(SqlKeyStyleEnum.POUND_SIGN_BRACKETS);//设置为#{}模式
         ParserResult result = sqlParsers.parse(SqlTypeEnum.SELECT,sSql, dicQuery);
 
         System.out.println(result.getCode().equals("0")?result.getSql():result.getMessage());//0转换成功，返回SQL；1转换失败，返回错误信息

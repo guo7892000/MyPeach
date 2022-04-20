@@ -52,7 +52,7 @@ public class UpdateSqlParser extends AbstractSqlParser {
                 continue;
             }
 
-            sb.append(parenthesesKeyConvert(sComma + col,""));
+            sb.append(complexParenthesesKeyConvert(sComma + col,""));
 
             if(sComma.isEmpty()){
                 String sKey = getFirstKeyName(col);

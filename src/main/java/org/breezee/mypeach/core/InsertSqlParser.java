@@ -97,7 +97,7 @@ public class InsertSqlParser extends AbstractSqlParser {
         String[] colArray = sSql.split(",");
         for (int i = 0; i < colArray.length; i++) {
             String sLastAndOr = i==0 ? "":",";
-            String colString = parenthesesKeyConvert(colArray[i],sLastAndOr);
+            String colString = complexParenthesesKeyConvert(colArray[i],sLastAndOr);
 
             if(sqlTypeEnum == SqlTypeEnum.INSERT_SELECT && ToolHelper.IsNull(colString)){
                 String sKeyName = getFirstKeyName(colArray[i]);
