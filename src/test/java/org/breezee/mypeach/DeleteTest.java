@@ -23,7 +23,7 @@ import java.util.Map;
  */
 @SpringBootTest
 public class DeleteTest {
-    String testFilePrefix = "src/test/Sql/Delete/01_Delete.txt/";
+    String testFilePrefix = "src/test/Sql/Delete/";
     @Autowired
     SqlParsers sqlParsers;
 

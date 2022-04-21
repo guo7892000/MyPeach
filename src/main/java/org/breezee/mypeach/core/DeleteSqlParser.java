@@ -3,6 +3,7 @@ package org.breezee.mypeach.core;
 import lombok.extern.slf4j.Slf4j;
 import org.breezee.mypeach.autoconfigure.MyPeachProperties;
 import org.breezee.mypeach.config.StaticConstants;
+import org.breezee.mypeach.entity.ParserResult;
 import org.breezee.mypeach.entity.SqlSegment;
 import org.breezee.mypeach.enums.SqlSegmentEnum;
 import org.breezee.mypeach.enums.SqlTypeEnum;
@@ -35,7 +36,11 @@ public class DeleteSqlParser extends AbstractSqlParser {
         while (mc.find()){
             sb.append(mc.group());//不变的INSERT INTO TABLE_NAME(部分先加入
             //FROM部分SQL处理
-            sb.append(fromWhereSqlConvert(sSql.substring(mc.end())));
+            String sWhereSql = fromWhereSqlConvert(sSql.substring(mc.end()));
+            if(ToolHelper.IsNull(sWhereSql)){
+                mapError.put("严重错误","删除语句不能没有条件，那样会清除整张表数据！");//错误列表
+            }
+            sb.append(sWhereSql);
         }
         return sb.toString();
     }

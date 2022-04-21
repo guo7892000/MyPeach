@@ -20,11 +20,11 @@ public class StaticConstants {
     /**
      * WHERE的正则表达式
      */
-    public static final String wherePattern= "\\s+WHERE\\s+";
+    public static final String wherePattern= "\\s*WHERE\\s+";
     /**
      * FROM的正则表达式
      */
-    public static final String fromPattern= "\\s+FROM\\s+";
+    public static final String fromPattern= "\\s*FROM\\s+";//前面为*，是因为有可能在拆分时，去掉了前面的空格
 
 
     /**
