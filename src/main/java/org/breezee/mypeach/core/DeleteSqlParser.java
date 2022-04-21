@@ -2,11 +2,15 @@ package org.breezee.mypeach.core;
 
 import lombok.extern.slf4j.Slf4j;
 import org.breezee.mypeach.autoconfigure.MyPeachProperties;
+import org.breezee.mypeach.config.StaticConstants;
+import org.breezee.mypeach.entity.SqlSegment;
+import org.breezee.mypeach.enums.SqlSegmentEnum;
 import org.breezee.mypeach.enums.SqlTypeEnum;
 import org.breezee.mypeach.utils.ToolHelper;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * @objectName:Delete Sql Analyzer(删除SQL分析器)
@@ -18,7 +22,6 @@ import java.util.regex.Pattern;
  */
 @Slf4j
 public class DeleteSqlParser extends AbstractSqlParser {
-    String sDeletePattern = "^DELETE\\s+FROM\\s+\\S+\\s+"; //正则式:DELETE FROM TABALE_NAME
 
     public DeleteSqlParser(MyPeachProperties properties) {
         super(properties);
@@ -28,11 +31,11 @@ public class DeleteSqlParser extends AbstractSqlParser {
     @Override
     public String headSqlConvert(String sSql) {
         StringBuilder sb = new StringBuilder();
-        Matcher mc = ToolHelper.getMatcher(sSql, sDeletePattern);//抽取出INSERT INTO TABLE_NAME(部分
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.deletePattern);//抽取出INSERT INTO TABLE_NAME(部分
         while (mc.find()){
             sb.append(mc.group());//不变的INSERT INTO TABLE_NAME(部分先加入
             //FROM部分SQL处理
-            sb.append(fromSqlConvert(sSql.substring(mc.end())));
+            sb.append(fromWhereSqlConvert(sSql.substring(mc.end())));
         }
         return sb.toString();
     }
@@ -42,4 +45,17 @@ public class DeleteSqlParser extends AbstractSqlParser {
         return "";
     }
 
+    @Override
+    protected List<SqlSegment> split(String sSql) {
+        List<SqlSegment> list = new ArrayList<>();
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.deletePattern);
+        while (mc.find()){
+            SqlSegment segment = new SqlSegment();
+            segment.setHeadString(mc.group());//不变的DELETE FROM部分
+            segment.setSql(sSql.substring(mc.end()));//FROM部分SQL处理
+            segment.setSqlSegmentEnum(SqlSegmentEnum.WHERE_CONDTION);
+            list.add(segment);
+        }
+        return list;
+    }
 }

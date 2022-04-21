@@ -3,6 +3,7 @@ MyPeach Dynamic SQL Parser Tool for Java
 ## 概述
 MyPeach是一个动态SQ转换工具，它能根据SQL中配置的键（默认格式：#键名#）和 键值集合（Map<String, Object>）来生成动态的SQL。  
 即某键如有值传入，那么会将该条件保留，并将其参数化或字符替换（可配置选择）；否则将该条件抛弃或修改为 AND 1=1（一些用括号括起来的多个条件分析时）。
+可动态的部分包括：所有类型的条件，INSERT项，UPDATE项。
 ## 特点
 * 基于Spring Boot，非常轻量
 * 数据库无关性
@@ -10,10 +11,11 @@ MyPeach是一个动态SQ转换工具，它能根据SQL中配置的键（默认�
 ```
     INSER INTO ... VALUES...  
     INSERT INTO... SELECT...FROM...WHERE...  
-    UPDATE ... SET...WHERE...  
+    UPDATE ... SET...FROM...WHERE...  
     DELETE FROM...WHERE...  
-    SEELCT...FROM...WHERE...  
-    WITH..AS () SELECT...FROM...WHERE...   
+    SEELCT...FROM...WHERE...GROUP BY...HAVING...ORDER BY...LIMIT...  
+    WITH...AS (),WITH...AS () SELECT...FROM...WHERE...
+    SELECT。。。UNION ALL SELECT..   
 ```
 * SQL语句键可带内置的校验规则描述，让SQL更安全：  
   条件使用：键字符支持'#MDLIST:N:LS#'格式，其中N表示非空，LS表示字符列表，LI为整型列表，即IN括号里的部分字符。  
@@ -70,7 +72,8 @@ mypeach.key-style=pound_sign_around
 mypeach.param-prefix=@
 mypeach.param-suffix=
 ````
- - 2.3 使用：键字符支持'#MDLIST:N:LS:#'格式，其中N表示非空，LS表示字符列表，即IN括号里的部分字符，他可以传入数组或ArrayList。LI为整型列表，值两边不加引号。  
+ - 2.3 使用：键字符支持'#MDLIST:N:R:LS#'格式:
+    其中N表示非空；R表示必须值替换；LS和LI都表示IN括号里的字符，可以传入数组或ArrayList。其中LI为整型列表，值两边不加引号。  
 - 2.3.1 自动注入对象  
 ```
     String testFilePrefix = "src/main/resources/sql/";
@@ -92,7 +95,9 @@ mypeach.param-suffix=
         dicQuery.put("NAME",1);
         dicQuery.put("#REMARK#","测试");
         //dicQuery.put("BF","back");
-        //ParserResult parserResult = selectSqlParser.parse(sSql, dicQuery);
+        List<Integer> list = new ArrayList<Integer>();
+        list.addAll(Arrays.asList(2,3,4));
+        dicQuery.put("MODIFIER_IN",list);//传入一个数组
         ParserResult parserResult = sqlParsers.parse(SqlTypeEnum.SELECT, sSql, dicQuery);
         return parserResult.getCode().equals("0")?parserResult.getSql():parserResult.getMessage();//0转换成功，返回SQL；1转换失败，返回错误信息
     }

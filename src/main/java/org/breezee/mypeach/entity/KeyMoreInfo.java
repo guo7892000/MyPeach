@@ -3,7 +3,6 @@ package org.breezee.mypeach.entity;
 import lombok.Data;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * @objectName: 键更多信息
@@ -19,11 +18,18 @@ public class KeyMoreInfo {
      * 可空（默认是）
      */
     boolean nullable = true;
-    String stringList;
+    /**
+     * IN字符串(注：指括号里边部分)
+     */
+    String inString;
+    /**
+     * 是否必须替换（有些键不做参数化时使用）
+     */
+    boolean mustValueReplace = false;
 
     /**
      * 构建【键更多信息】对象
-     * @param sKeyMore 键更多信息字符，例如：CITY_NAME:N
+     * @param sKeyMore 键更多信息字符，例如：CITY_NAME:N:R
      * @return
      */
     public static KeyMoreInfo build(String sKeyMore, Object objValue){
@@ -35,7 +41,9 @@ public class KeyMoreInfo {
             if(sOne.isEmpty()) continue;
 
             if("N".equals(sOne)){
-                moreInfo.setNullable(false);
+                moreInfo.setNullable(false);//非空
+            } else if("R".equals(sOne)){
+                moreInfo.setMustValueReplace(true);//必须替换
             } else if("LS".equals(sOne)){
                 listConvert(objValue, moreInfo,true);
             } else if("LI".equals(sOne)){
@@ -60,7 +68,7 @@ public class KeyMoreInfo {
         if(stringFlag){
             //String数组或集合
             if(objValue instanceof String[]){
-                moreInfo.setStringList("'" + String.join("','",(String[]) objValue) + "'");
+                moreInfo.setInString("'" + String.join("','",(String[]) objValue) + "'");
                 return;
             }
             if(objValue instanceof Collection){
@@ -73,12 +81,12 @@ public class KeyMoreInfo {
                     sPre = "','";
                 }
                 sList += "'";
-                moreInfo.setStringList(sList);
+                moreInfo.setInString(sList);
             }
         } else {
             //Integer数组或集合
             if(objValue instanceof Integer[]){
-                moreInfo.setStringList(String.join(",",(String[]) objValue));
+                moreInfo.setInString(String.join(",",(String[]) objValue));
                 return;
             }
             if(objValue instanceof Collection){
@@ -90,7 +98,7 @@ public class KeyMoreInfo {
                     sList += sPre + next.toString().replace("'","");
                     sPre = ",";
                 }
-                moreInfo.setStringList(sList);
+                moreInfo.setInString(sList);
             }
         }
 

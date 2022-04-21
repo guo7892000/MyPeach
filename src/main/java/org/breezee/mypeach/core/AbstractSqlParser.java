@@ -4,18 +4,19 @@ import org.breezee.mypeach.autoconfigure.MyPeachProperties;
 import org.breezee.mypeach.config.StaticConstants;
 import org.breezee.mypeach.entity.ParserResult;
 import org.breezee.mypeach.entity.SqlKeyValueEntity;
+import org.breezee.mypeach.entity.SqlSegment;
 import org.breezee.mypeach.enums.SqlKeyStyleEnum;
 import org.breezee.mypeach.enums.SqlTypeEnum;
 import org.breezee.mypeach.enums.TargetSqlParamTypeEnum;
 import org.breezee.mypeach.utils.ToolHelper;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static java.util.regex.Pattern.CASE_INSENSITIVE;
 
 /**
  * @objectName: SQL分析抽象类
@@ -95,7 +96,7 @@ public abstract class AbstractSqlParser {
         }
 
         //2、获取SQL所有参数信息
-        regex = Pattern.compile(keyPattern,CASE_INSENSITIVE);//Pattern：explanatory note
+        regex = Pattern.compile(keyPattern,java.util.regex.Pattern.CASE_INSENSITIVE);//Pattern：explanatory note
         mc = regex.matcher(sSql);
         while (mc.find()) {
             String sParamName = ToolHelper.getKeyName(mc.group(), myPeachProp);
@@ -129,8 +130,13 @@ public abstract class AbstractSqlParser {
             iStart++;
         }
 
-        //4、头部处理：交给字类来做
+        //4、转换处理：
+        // 4.1 方式1：分拆边处理（已实现）
         String sFinalSql = headSqlConvert(sSql);
+
+        //4.2 方式2：先拆分字符（部分拆分过程中处理），再统一处理（未实现）
+        //List<SqlSegment> list = split(sSql);
+
         //在处理过程中，也会往mapError写入错误信息，所以这里如有错误，也返回出错信息
         if(mapError.size()>0){
             return ParserResult.fail("部分非空键（"+String.join(",",mapError.keySet())+"）没有传入值，已退出！",mapError);
@@ -151,94 +157,179 @@ public abstract class AbstractSqlParser {
      * FROM段SQL的转换（包括WHERE部分）
      * @param sSql
      */
-    protected String fromSqlConvert(String sSql) {
+    protected String fromWhereSqlConvert(String sSql) {
         StringBuilder sb = new StringBuilder();
         String sSet = "";
         String sFromWhere = "";
 
         //分隔FROM段
         Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.fromPattern);
-        boolean isDealWhere = false;//是否处理过WHERE语句
-        while (mc.find()) {
-            //一、FROM及之后WHERE端的处理
-            sSet = sSql.substring(0, mc.start()).trim();
-            sFromWhere = sSql.substring(mc.end()).trim();
+        boolean isDealWhere = false;
+        //因为只会有一个FROM，所以这里不用WHILE，而使用if
+        if(!mc.find()){
+            //1。没有FROM语句
+            sb.append(whereConvert(sSql));
+            return sb.toString();
+        }
+        //2.有FROM，及之后可能存在的WHERE段处理
+        sSet = sSql.substring(0, mc.start()).trim();
+        sFromWhere = sSql.substring(mc.end()).trim();
 
-            //1、查询语句中查询的字段，或更新语句中的更新项
-            sb.append(beforeFromConvert(sSet));//由子类来处理
-            sb.append(mc.group());//sbHead添加FROM字符
+        //1、查询语句中查询的字段，或更新语句中的更新项
+        sb.append(beforeFromConvert(sSet));//由子类来处理
+        sb.append(mc.group());//sbHead添加FROM字符
 
-            //2、WHERE段分隔
-            Matcher mcWhere = ToolHelper.getMatcher(sFromWhere, StaticConstants.wherePattern);
-            while (mcWhere.find()) {
-                //3、FROM段的处理
-                String sFrom = sFromWhere.substring(0,mcWhere.start());
-                if(!hasKey(sFrom)){
-                    //FROM段没有参数时，直接拼接
-                    sb.append(sFrom);
-                    sb.append(mcWhere.group());
-                    //WHERE条件的处理
-                    String sCondition = sFromWhere.substring(mcWhere.end());
-                    //AND和OR的条件转换
-                    sb.append(andOrConditionConvert(sCondition));
-                    break;//中断本次处理
-                }
+        //2、WHERE段分隔
+        Matcher mcWhere = ToolHelper.getMatcher(sFromWhere, StaticConstants.wherePattern);
+        //因为只会有一个FROM，所以这里不用WHILE，而使用if
+        if (!mcWhere.find()) {
+            return sb.toString();//没有WHERE段，则直接返回
+        }
+        //3、FROM段的处理
+        String sFrom = sFromWhere.substring(0,mcWhere.start());//
+        String sWhere = sFromWhere.substring(mcWhere.end()- mcWhere.group().length());
 
-                //4 通过各种Join正则式分解语句
-                Matcher mc2 = ToolHelper.getMatcher(sFrom, "\\s*((LEFT)|(RIGHT)|(FULL)|(INNER))?\\s+JOIN\\s*");
-                int iStart2=0;
-                String lastJoin = "";//最后一次JOIN语句的字符，这个在while循环外处理最后一段字符时用到
-                while (mc2.find()) {
-                    String oneJoin = sFrom.substring(iStart2,mc2.start());//第一条JOIN语句
-                    lastJoin = mc2.group();
-                    if(!hasKey(oneJoin)){
-                        //没有参数，直接拼接
-                        sb.append(oneJoin);
-                        //sbHead.append(mc2.group());
-                        iStart2 = mc2.end();
-                        continue;//继续下一段处理
-                    }
-                    //AND和OR的条件转换
-                    sb.append(andOrConditionConvert(oneJoin));
-                    iStart2 = mc2.end();
-                }
-                sb.append(lastJoin);
-                //5 之前正则式中最后一段SQL的AND和OR的条件转换
-                sb.append(andOrConditionConvert(sFrom.substring(iStart2)));
+        if(!hasKey(sFrom)){
+            //FROM段没有参数时，直接拼接
+            sb.append(sFrom);
+            sb.append(whereConvert(sWhere));
 
-                //6.WHERE段的SQL处理
-                String sWhereString = mcWhere.group();
-                sb.append(sWhereString);//添加上WHERE
-                int iLength = sb.length();
-                //6.1 AND和OR的条件转换
-                sb.append(andOrConditionConvert(sFromWhere.substring(mcWhere.end())));
-                //6.2、如果所有条件都为空，即sbHead的长度没变
-                if(iLength == sb.length()){
-                    sb.delete(iLength-sWhereString.length(),iLength);//移除多余的WHER字符，因为WHERE后面没有条件，不过一般这种情况很少见
-                }
-
-            }
-            isDealWhere = true;
+            return sb.toString();
         }
 
-        if(!isDealWhere){
-            //二、 如果语句中没有FROM语句，那会直接进入
-            Matcher mcWhere = ToolHelper.getMatcher(sSql, StaticConstants.wherePattern);
-            while (mcWhere.find()) {
-                String sWhereString = mcWhere.group();
-                sb.append(sWhereString);
-                int iLength = sb.length();
-                //2.1 AND和OR的条件转换
-                sb.append(andOrConditionConvert(sSql.substring(mcWhere.end())));
-                //2.2、如果所有条件都为空，即sbHead的长度没变
-                if(iLength == sb.length()){
-                    sb.delete(iLength-sWhereString.length(),iLength);//移除多余的WHER字符，因为WHERE后面没有条件，不过一般这种情况很少见
-                }
+        //4 通过各种Join正则式分解语句
+        Matcher mc2 = ToolHelper.getMatcher(sFrom, "\\s*((LEFT)|(RIGHT)|(FULL)|(INNER))?\\s+JOIN\\s*");
+        int iStart2=0;
+        String lastJoin = "";//最后一次JOIN语句的字符，这个在while循环外处理最后一段字符时用到
+        while (mc2.find()) {
+            String oneJoin = sFrom.substring(iStart2,mc2.start());//第一条JOIN语句
+            lastJoin = mc2.group();
+            if(!hasKey(oneJoin)){
+                //没有参数，直接拼接
+                sb.append(oneJoin);
+                //sbHead.append(mc2.group());
+                iStart2 = mc2.end();
+                continue;//继续下一段处理
             }
+            //AND和OR的条件转换
+            sb.append(andOrConditionConvert(oneJoin));
+            iStart2 = mc2.end();
         }
+        sb.append(lastJoin);
+        //5 之前正则式中最后一段SQL的AND和OR的条件转换
+        sb.append(andOrConditionConvert(sFrom.substring(iStart2)));
+
+        //6.WHERE段的SQL处理
+        sb.append(whereConvert(sWhere));
+
         return sb.toString();
     }
 
+    private String whereConvert(String sSql) {
+        StringBuilder sb = new StringBuilder();
+        //二、 如果语句中没有FROM语句，那会直接进入
+        Matcher mcWhere = ToolHelper.getMatcher(sSql, StaticConstants.wherePattern);
+        if (!mcWhere.find()) {
+            return sb.toString();
+        }
+        String sWhereString = mcWhere.group();
+
+        //7.GROUP BY的处理
+        //6、拆出WHERE至GROUP BY之间的片段
+        boolean needWhereSplit = true;//是否需要做WHERE分拆
+        boolean needGroupBySplit = false;//是否需要做GroupBy分拆
+        boolean needHavingSplit = false;//是否需要做GroupBy分拆
+        Matcher mcGroupBy = ToolHelper.getMatcher(sSql, StaticConstants.groupByPattern);
+        if (mcGroupBy.find()) {
+            needGroupBySplit = true;
+            //2.1 AND和OR的条件转换
+            String OneSql = sSql.substring(mcWhere.end(),mcGroupBy.start());
+            String sConvertWHere = andOrConditionConvert(OneSql);
+            if(ToolHelper.IsNotNull(sConvertWHere)){
+                sb.append(sWhereString + sConvertWHere);
+            }
+
+            sb.append(mcGroupBy.group());
+            sSql = sSql.substring(mcGroupBy.end());
+            if(!hasKey(sSql)){
+                //之后都没有key配置，那么直接将字符加到尾部，然后返回
+                sb.append(sSql);
+                return sb.toString();
+            }
+
+            needWhereSplit = false;
+            Matcher mcHaving = ToolHelper.getMatcher(sSql, StaticConstants.havingPattern);
+            if (mcHaving.find()) {
+                needGroupBySplit = false;
+                String sOne = sSql.substring(0,mcHaving.start());
+                sOne = andOrConditionConvert(sOne);
+                sb.append(sOne);
+                sb.append(mcHaving.group());
+
+                sSql = sSql.substring(mcHaving.end());
+                needHavingSplit = true;
+            }
+        }
+
+        //7、拆出ORDER片段
+        boolean needOrderSplit = false;
+        Matcher mcOrder = ToolHelper.getMatcher(sSql, StaticConstants.orderByPattern);
+        if (mcOrder.find()) {
+            if(needWhereSplit){
+                String sConvertWHere = andOrConditionConvert(sSql.substring(mcWhere.end(),mcOrder.start()));
+                if(ToolHelper.IsNotNull(sConvertWHere)){
+                    sb.append(sWhereString + sConvertWHere);
+                }
+                sSql = sSql.substring(mcOrder.end());
+                needWhereSplit = false;
+                if(!hasKey(sSql)){
+                    //之后都没有key配置，那么直接将字符加到尾部，然后返回
+                    sb.append(sSql);
+                    return sb.toString();
+                }
+            }
+            if(needGroupBySplit){
+                sb.append(andOrConditionConvert(sSql.substring(0,mcOrder.start())));
+                needGroupBySplit = false;
+            }
+            if(needHavingSplit){
+                sb.append(andOrConditionConvert(sSql.substring(0,mcOrder.start())));
+                needHavingSplit = false;
+            }
+            sb.append(mcOrder.group());
+            sSql = sSql.substring(mcOrder.end());
+            needOrderSplit = true;
+        }
+
+        //8、拆出LIMIT段
+        Matcher mcLimit = ToolHelper.getMatcher(sSql, StaticConstants.limitPattern);
+        if (mcLimit.find()) {
+            if(needWhereSplit){
+                String sConvertWHere = andOrConditionConvert(sSql.substring(0,mcLimit.start()));
+                if(ToolHelper.IsNotNull(sConvertWHere)){
+                    sb.append(sWhereString + sConvertWHere);
+                }
+            }
+            if(needGroupBySplit){
+                sb.append(andOrConditionConvert(sSql.substring(0,mcLimit.start())));
+            }
+            if(needHavingSplit){
+                sb.append(andOrConditionConvert(sSql.substring(0,mcLimit.start())));
+            }
+            if(needOrderSplit){
+                sb.append(andOrConditionConvert(sSql.substring(0,mcLimit.start())));
+            }
+            sb.append(mcLimit.group());
+            sSql = sSql.substring(mcLimit.end());
+        }
+
+        //9、最后一段字符的处理
+        if(ToolHelper.IsNotNull(sSql.trim())){
+            sb.append(andOrConditionConvert(sSql));
+        }
+
+        return sb.toString();
+    }
 
 
     /**
@@ -257,7 +348,7 @@ public abstract class AbstractSqlParser {
             //查看是否有：##序号##
             boolean parenthesesRounFlag = false;//没有
             Matcher mc2 = ToolHelper.getMatcher(oneSql, parenthesesRoundKeyPattern);
-            if(mc2.find()){
+            while (mc2.find()){
                 parenthesesRounFlag = true;
             }
             if(hasKey(oneSql) || parenthesesRounFlag) {
@@ -346,8 +437,9 @@ public abstract class AbstractSqlParser {
     }
 
     /**
-     * 括号的SQL段转换(注：已经过AND或OR拆分，只含一个键)
-     *  例如( ( CREATOR = '#CREATOR#' OR CREATOR_ID = #CREATOR_ID# ) AND TFLG = '#TFLG#')
+     * 含括号的SQL段转换
+     *   注：已经过AND或OR拆分，只含一个键，并且字符前有左括号，或者字符后有右括号
+     *  例如 ( ( CREATOR = '#CREATOR#'、CREATOR_ID = #CREATOR_ID# ) 、 TFLG = '#TFLG#')
      * @param sSql 只有一个key的字符（即已经过AND或OR的正则表达式匹配后分拆出来的部分字符）
      * @param sLastAndOr 前一个拼接的AND或OR字符
      */
@@ -399,7 +491,7 @@ public abstract class AbstractSqlParser {
     private String childQueryConvert(String sPre, String sEnd, String sSource) {
         StringBuilder sb = new StringBuilder();
         //1、判断是否有子查询:抽取出子查询的 (SELECT 部分
-        Matcher mcChild = ToolHelper.getMatcher(sSource, "\\(SELECT\\s+");
+        Matcher mcChild = ToolHelper.getMatcher(sSource, StaticConstants.childSelectPattern);
         if (!mcChild.find()) {
             return "";//没有子查询，返回空
         }
@@ -449,18 +541,17 @@ public abstract class AbstractSqlParser {
                 return ""; //1、没有值传入，直接返回空
             }
             SqlKeyValueEntity entity = mapSqlKeyValid.get(sKey);
-            String sList = entity.getKeyMoreInfo().getStringList();
+            String sList = entity.getKeyMoreInfo().getInString();
             //最终值处理标志
             if(ToolHelper.IsNotNull(sList)){
                 return sSql.replace(mc.group(), sList);//替换IN的字符串
             }
-
-            if(myPeachProp.getTargetSqlParamTypeEnum() == TargetSqlParamTypeEnum.Param ){
-                //2、返回参数化的SQL语句
-                return sSql.replace(mc.group(), myPeachProp.getParamPrefix()+sKey+ myPeachProp.getParamSuffix());
+            if(entity.getKeyMoreInfo().isMustValueReplace() || myPeachProp.getTargetSqlParamTypeEnum() == TargetSqlParamTypeEnum.DIRECT_RUN){
+                //2、返回替换键后只有值的SQL语句
+                return sSql.replace(mc.group(), String.valueOf(entity.getReplaceKeyWithValue()));
             }
-            //3、返回替换键后只有值的SQL语句
-            return sSql.replace(mc.group(), String.valueOf(entity.getReplaceKeyWithValue()));
+            //3、返回参数化的SQL语句
+            return sSql.replace(mc.group(), myPeachProp.getParamPrefix()+sKey+ myPeachProp.getParamSuffix());
         }
         return sSql;//4、没有键时，直接返回原语句
     }
@@ -512,10 +603,13 @@ public abstract class AbstractSqlParser {
     protected String queryHeadSqlConvert(String sSql) {
         StringBuilder sb = new StringBuilder();
         Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.selectPattern);//抽取出SELECT部分
-        while (mc.find()){
+        if (mc.find()){
             sb.append(mc.group());//不变的SELECT部分先加入
             sSql = sSql.substring(mc.end()).trim();
-            sb.append(fromSqlConvert(sSql));
+            sb.append(fromWhereSqlConvert(sSql));
+        } else {
+            //传过来的SQL有可能去掉了SELECT部分
+            sb.append(fromWhereSqlConvert(sSql));
         }
         return  sb.toString();
     }
@@ -552,6 +646,7 @@ public abstract class AbstractSqlParser {
                 }
             }
         }
+
         return sb.toString();
     }
 
@@ -567,4 +662,21 @@ public abstract class AbstractSqlParser {
      */
     protected abstract String beforeFromConvert(String sSql);
 
+    /**
+     * 拆分SQL
+     * @param sSql
+     * @return
+     */
+    protected abstract List<SqlSegment> split(String sSql);
+
+    /**
+     * from段以后的SQL拆分
+     * @param sSql
+     * @return
+     */
+    protected List<SqlSegment> fromSplit(String sSql){
+        List<SqlSegment> sqlList = new ArrayList<>();
+
+        return sqlList;
+    }
 }

@@ -108,13 +108,19 @@ public class SqlKeyValueEntity {
             sParamNamePreSuffix = StaticConstants.HASH + sParamName + StaticConstants.HASH;
         }
 
+        //取出传入条件中的值：对于字符串类型，会替换字符中的单引号
         Object inValue = null;
         if(dicQuery.containsKey(sParamName) && ToolHelper.IsNotNull(dicQuery.get(sParamName))){
             inValue = dicQuery.get(sParamName);
-
+            if(inValue instanceof String){
+                inValue = String.valueOf(inValue).replace("'","");
+            }
         }
         if(dicQuery.containsKey(sParamNamePreSuffix) && ToolHelper.IsNotNull(dicQuery.get(sParamNamePreSuffix))){
             inValue = dicQuery.get(sParamNamePreSuffix);
+            if(inValue instanceof String){
+                inValue = String.valueOf(inValue).replace("'","");
+            }
         }
 
         entity.setKeyMoreInfo(KeyMoreInfo.build(sParamNameMore,inValue));//设置更多信息对象

@@ -2,11 +2,15 @@ package org.breezee.mypeach.core;
 
 import lombok.extern.slf4j.Slf4j;
 import org.breezee.mypeach.autoconfigure.MyPeachProperties;
+import org.breezee.mypeach.config.StaticConstants;
+import org.breezee.mypeach.entity.SqlSegment;
+import org.breezee.mypeach.enums.SqlSegmentEnum;
 import org.breezee.mypeach.enums.SqlTypeEnum;
 import org.breezee.mypeach.utils.ToolHelper;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * @objectName: 新增SQL分析器（OK）
@@ -18,11 +22,7 @@ import java.util.regex.Pattern;
  * @wechat: BreezeeHui
  * @date: 2022/4/12 16:45
  */
-@Slf4j
 public class InsertSqlParser extends AbstractSqlParser {
-
-    String sValuesPattern = "\\)\\s*VALUES\\s*\\(\\s*"; //正则式：)VALUES(
-    String sInsertIntoPattern = "^INSERT\\s+INTO\\s+\\S+\\s*\\(\\s*";//正则式：INSERT INTO TABLE_NAME(
 
     public InsertSqlParser(MyPeachProperties properties) {
         super(properties);
@@ -32,28 +32,89 @@ public class InsertSqlParser extends AbstractSqlParser {
     @Override
     public String headSqlConvert(String sSql){
         StringBuilder sbHead = new StringBuilder();
+        sSql = insertValueConvert(sSql,sbHead);
+        if(ToolHelper.IsNull(sSql)){
+            return sbHead.toString();
+        }
+
+        //4、INSERT INTO TABLE_NAME 。。 SELECT形式
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.insertSelectPattern);//抽取出INSERT INTO TABLE_NAME(部分
+        while (mc.find()){
+            sqlTypeEnum = SqlTypeEnum.INSERT_SELECT;
+            String sInsert = sSql.substring(0,mc.start()) + mc.group();
+            sbHead.append(sInsert);//不变的INSERT INTO TABLE_NAME(部分先加入
+            sSql = sSql.substring(mc.end()).trim();
+            //FROM段处理
+            sbHead.append(fromWhereSqlConvert(sSql));
+        }
+        return sbHead.toString();
+    }
+
+    @Override
+    protected String beforeFromConvert(String sSql) {
+        StringBuilder sbHead = new StringBuilder();
+        String[] colArray = sSql.split(",");
+        for (int i = 0; i < colArray.length; i++) {
+            String sLastAndOr = i==0 ? "":",";
+            String colString = complexParenthesesKeyConvert(colArray[i],sLastAndOr);
+
+            if(sqlTypeEnum == SqlTypeEnum.INSERT_SELECT && ToolHelper.IsNull(colString)){
+                String sKeyName = getFirstKeyName(colArray[i]);
+                mapError.put(sKeyName,"SELECT中的查询项"+sKeyName+"，其值必须转入，不能为空！");
+            }
+            sbHead.append(colString);
+        }
+        return sbHead.toString();
+    }
+
+    @Override
+    protected List<SqlSegment> split(String sSql) {
+        List<SqlSegment> list = new ArrayList<>();
+        StringBuilder sbHead = new StringBuilder();
+        sSql = insertValueConvert(sSql,sbHead);
+        if(ToolHelper.IsNull(sSql)){
+            SqlSegment segment = new SqlSegment();
+            segment.setFinalSql(sbHead.toString());
+            segment.setNeedParse(false);
+            segment.setSqlSegmentEnum(SqlSegmentEnum.INSER_VALUE);
+            list.add(segment);
+        } else {
+            Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.insertSelectPattern);//抽取出INSERT INTO TABLE_NAME(部分
+            int indexSelct = 0;
+            if (mc.find()){
+                sqlTypeEnum = SqlTypeEnum.INSERT_SELECT;
+                String sInsert = sSql.substring(0,mc.start())+ mc.group();
+                sSql = sSql.substring(mc.end()).trim();
+
+                SqlSegment segment = new SqlSegment();
+                segment.setHeadString(sbHead.toString() + sInsert );
+                segment.setSql(sSql);
+                segment.setSqlSegmentEnum(SqlSegmentEnum.MORE_SELECT);
+                list.add(segment);
+            }
+        }
+        return list;
+    }
+
+    private String insertValueConvert(String sSql,StringBuilder sb){
+        StringBuilder sbHead = new StringBuilder();
         StringBuilder sbTail = new StringBuilder();
         //1、抽取出INSERT INTO TABLE_NAME(部分
-        Matcher mc = ToolHelper.getMatcher(sSql, sInsertIntoPattern);
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.insertIntoPattern);
         while (mc.find()){
             sbHead.append(mc.group());//不变的INSERT INTO TABLE_NAME(部分先加入
             sSql = sSql.substring(mc.end()).trim();
-            //log.debug("Remove INSERT INTO TABLE_NAME(:",sSql);
         }
 
         //2、判断是否insert into ... values形式
-        boolean insertValuesFlag = false;
-        mc = ToolHelper.getMatcher(sSql, sValuesPattern);//先根据VALUES关键字将字符分隔为两部分
+        mc = ToolHelper.getMatcher(sSql, StaticConstants.valuesPattern);//先根据VALUES关键字将字符分隔为两部分
         String sInsert ="";
         String sPara="";
-        while (mc.find()){
+        if (mc.find()){
             sInsert = sSql.substring(0,mc.start()).trim();
             sPara = sSql.substring(mc.end()).trim();
             sbTail.append(mc.group());//不变的)VALUES(部分先加入
-            insertValuesFlag = true;
-        }
 
-        if(insertValuesFlag){
             //3、 insert into ... values形式
             String[] colArray = sInsert.split(",");
             String[] paramArray = sPara.split(",");
@@ -76,36 +137,10 @@ public class InsertSqlParser extends AbstractSqlParser {
             if(!sbTail.toString().endsWith(")")){
                 sbTail.append(")");
             }
-        } else {
-            //4、INSERT INTO TABLE_NAME 。。 SELECT形式
-            mc = ToolHelper.getMatcher(sSql, "\\s*\\)\\s+SELECT\\s+");//抽取出INSERT INTO TABLE_NAME(部分
-            while (mc.find()){
-                sqlTypeEnum = SqlTypeEnum.INSERT_SELECT;
-                sInsert = sSql.substring(0,mc.start()) + mc.group();
-                sbHead.append(sInsert);//不变的INSERT INTO TABLE_NAME(部分先加入
-                sSql = sSql.substring(mc.end()).trim();
-                //FROM段处理
-                sbHead.append(fromSqlConvert(sSql));
-            }
+            sSql = "";//处理完毕清空SQL
         }
-        return sbHead.toString()+sbTail.toString();
-    }
-
-    @Override
-    protected String beforeFromConvert(String sSql) {
-        StringBuilder sbHead = new StringBuilder();
-        String[] colArray = sSql.split(",");
-        for (int i = 0; i < colArray.length; i++) {
-            String sLastAndOr = i==0 ? "":",";
-            String colString = complexParenthesesKeyConvert(colArray[i],sLastAndOr);
-
-            if(sqlTypeEnum == SqlTypeEnum.INSERT_SELECT && ToolHelper.IsNull(colString)){
-                String sKeyName = getFirstKeyName(colArray[i]);
-                mapError.put(sKeyName,"SELECT中的查询项"+sKeyName+"，其值必须转入，不能为空！");
-            }
-            sbHead.append(colString);
-        }
-        return sbHead.toString();
+        sb.append(sbHead.toString()+sbTail.toString());
+        return sSql;
     }
 
 }
