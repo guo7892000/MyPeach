@@ -3,8 +3,6 @@ package org.breezee.mypeach.core;
 import lombok.extern.slf4j.Slf4j;
 import org.breezee.mypeach.autoconfigure.MyPeachProperties;
 import org.breezee.mypeach.config.StaticConstants;
-import org.breezee.mypeach.entity.SqlSegment;
-import org.breezee.mypeach.enums.SqlSegmentEnum;
 import org.breezee.mypeach.enums.SqlTypeEnum;
 import org.breezee.mypeach.utils.ToolHelper;
 
@@ -45,7 +43,7 @@ public class InsertSqlParser extends AbstractSqlParser {
             sbHead.append(sInsert);//不变的INSERT INTO TABLE_NAME(部分先加入
             sSql = sSql.substring(mc.end()).trim();
             //FROM段处理
-            sbHead.append(fromWhereSqlConvert(sSql));
+            sbHead.append(fromWhereSqlConvert(sSql,false));
         }
         return sbHead.toString();
     }
@@ -65,35 +63,6 @@ public class InsertSqlParser extends AbstractSqlParser {
             sbHead.append(colString);
         }
         return sbHead.toString();
-    }
-
-    @Override
-    protected List<SqlSegment> split(String sSql) {
-        List<SqlSegment> list = new ArrayList<>();
-        StringBuilder sbHead = new StringBuilder();
-        sSql = insertValueConvert(sSql,sbHead);
-        if(ToolHelper.IsNull(sSql)){
-            SqlSegment segment = new SqlSegment();
-            segment.setFinalSql(sbHead.toString());
-            segment.setNeedParse(false);
-            segment.setSqlSegmentEnum(SqlSegmentEnum.INSER_VALUE);
-            list.add(segment);
-        } else {
-            Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.insertSelectPattern);//抽取出INSERT INTO TABLE_NAME(部分
-            int indexSelct = 0;
-            if (mc.find()){
-                sqlTypeEnum = SqlTypeEnum.INSERT_SELECT;
-                String sInsert = sSql.substring(0,mc.start())+ mc.group();
-                sSql = sSql.substring(mc.end()).trim();
-
-                SqlSegment segment = new SqlSegment();
-                segment.setHeadString(sbHead.toString() + sInsert );
-                segment.setSql(sSql);
-                segment.setSqlSegmentEnum(SqlSegmentEnum.MORE_SELECT);
-                list.add(segment);
-            }
-        }
-        return list;
     }
 
     private String insertValueConvert(String sSql,StringBuilder sb){

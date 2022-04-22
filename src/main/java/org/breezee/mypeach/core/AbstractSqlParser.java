@@ -4,16 +4,12 @@ import org.breezee.mypeach.autoconfigure.MyPeachProperties;
 import org.breezee.mypeach.config.StaticConstants;
 import org.breezee.mypeach.entity.ParserResult;
 import org.breezee.mypeach.entity.SqlKeyValueEntity;
-import org.breezee.mypeach.entity.SqlSegment;
 import org.breezee.mypeach.enums.SqlKeyStyleEnum;
 import org.breezee.mypeach.enums.SqlTypeEnum;
 import org.breezee.mypeach.enums.TargetSqlParamTypeEnum;
 import org.breezee.mypeach.utils.ToolHelper;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,7 +28,6 @@ public abstract class AbstractSqlParser {
     protected String keyPrefix = "#";
     protected String keySuffix = "#";
     protected String keyPattern;//键正则式
-    String sParenthesesPattern="\\(.+\\)";//left Parentheses patter
 
     /**
      * 优先处理的括号会被替换的两边字符加中间一个序号值，例如：##1##
@@ -89,19 +84,26 @@ public abstract class AbstractSqlParser {
         sSql = sSql.trim().toUpperCase();//将SQL转换为大写
 
         //1、删除所有注释，降低分析难度，提高准确性
-        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.remarkPatter);
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.remarkPatter);//Pattern：explanatory note
         Pattern regex;
         while (mc.find()) {
             sSql = sSql.replace(mc.group(),"");//删除所有注释
         }
 
-        //2、获取SQL所有参数信息
-        regex = Pattern.compile(keyPattern,java.util.regex.Pattern.CASE_INSENSITIVE);//Pattern：explanatory note
-        mc = regex.matcher(sSql);
+        //2、对传入的条件集合中的KEY进行优化：如去掉#号，如有：分隔，那么取第一个值作为键
+        Map<String, Object> dicNew = new HashMap<>();
+        for (String key:dic.keySet()) {
+            String sKeyNew = key.replace("#","").replace("{","").replace("}","");
+            sKeyNew = sKeyNew.split(":")[0];
+            dicNew.put(sKeyNew,dic.get(key));
+        }
+
+        //3、获取SQL所有参数信息
+        mc = ToolHelper.getMatcher(sSql, keyPattern);
         while (mc.find()) {
             String sParamName = ToolHelper.getKeyName(mc.group(), myPeachProp);
             if(!mapSqlKey.containsKey(sParamName)){
-                SqlKeyValueEntity param = SqlKeyValueEntity.build(mc.group(), dic, myPeachProp);
+                SqlKeyValueEntity param = SqlKeyValueEntity.build(mc.group(), dicNew, myPeachProp);
                 mapSqlKey.put(sParamName,param);
                 if(param.isHasValue()){
                     mapSqlKeyValid.put(sParamName,param);//有传值的键
@@ -120,29 +122,21 @@ public abstract class AbstractSqlParser {
             return ParserResult.fail("部分非空键（"+String.join(",",mapError.keySet())+"）没有传入值，已退出！",mapError);
         }
 
-        //3、得到符合左右括号正则式的内容，并替换为类似：##序号##格式，方便先从大方面分析结构，之后再取出括号里的内容来进一步分析
-        mc = ToolHelper.getMatcher(sSql, sParenthesesPattern);
-        int iStart = 0;
-        while (mc.find()) {
-            String sKey = parenthesesRoundKey + String.valueOf(iStart) + parenthesesRoundKey;
-            mapsParentheses.put(sKey,mc.group());
-            sSql = sSql.replace(mc.group(),sKey);//符合左右括号正则式的内容，替换为：##序号##
-            iStart++;
+        //4、得到符合左右括号正则式的内容，并替换为类似：##序号##格式，方便先从大方面分析结构，之后再取出括号里的内容来进一步分析
+        String sNewSql = generateParenthesesKey(sSql);
+        if(ToolHelper.IsNotNull(sNewSql)){
+            sSql = sNewSql;
         }
 
-        //4、转换处理：
-        // 4.1 方式1：分拆边处理（已实现）
+        //5、转换处理：边拆边处理
         String sFinalSql = headSqlConvert(sSql);
-
-        //4.2 方式2：先拆分字符（部分拆分过程中处理），再统一处理（未实现）
-        //List<SqlSegment> list = split(sSql);
 
         //在处理过程中，也会往mapError写入错误信息，所以这里如有错误，也返回出错信息
         if(mapError.size()>0){
-            return ParserResult.fail("部分非空键（"+String.join(",",mapError.keySet())+"）没有传入值，已退出！",mapError);
+            return ParserResult.fail("部分非空键没有传入值或其他错误，关联信息："+String.join(",",mapError.keySet())+"，已退出！",mapError);
         }
         ParserResult result;
-        //5、返回最终结果
+        //6、返回最终结果
         if(sFinalSql.isEmpty()){
             result = ParserResult.fail("转换失败，原因不明。",mapError);
         } else {
@@ -153,11 +147,58 @@ public abstract class AbstractSqlParser {
         return result;
     }
 
+    /**
+     * 生成包括##序号##键方法
+     * 目的：为了简化大方面的分析
+     * @param sSql
+     * @return
+     */
+    private String generateParenthesesKey(String sSql) {
+        Matcher mc;
+        StringBuilder sb = new StringBuilder();
+        mc = ToolHelper.getMatcher(sSql, StaticConstants.parenthesesPattern);
+        int iGroup = 0;//第几组括号
+        int iLeft = 0;//左括号数
+        int iRight = 0;//右括号数
+        int iGroupStart = 0;//组开始的位置
+        while (mc.find()) {
+            if("(".equals(mc.group())){
+                iLeft++;
+                if(iLeft==1){
+                    sb.append(sSql.substring(iGroupStart,mc.start()));//注：不要包括左括号
+                    iGroupStart = mc.end();
+                }
+            }else{
+                iRight++;
+            }
+            //判断是否是一组数据
+            if(iLeft == iRight){
+                String sKey = parenthesesRoundKey + String.valueOf(iGroup) + parenthesesRoundKey;
+                //符合左右括号正则式的内容，替换为：##序号##。把最外面的左右括号也放进去
+                String sParenthesesSql = "(" + sSql.substring(iGroupStart,mc.start()) + mc.group();
+                mapsParentheses.put(sKey,sParenthesesSql);
+                sb.append(sKey);//注：不要包括右括号
+                iGroupStart = mc.end();//下一个语句的开始
+                iGroup++;
+                iLeft = 0;
+                iRight = 0;
+            }
+        }
+        //最后的字符
+        if(iGroupStart>0){
+            sb.append(sSql.substring(iGroupStart));
+        }
+
+        String sNewSql = sb.toString();
+        return sNewSql;
+    }
+
     /***
      * FROM段SQL的转换（包括WHERE部分）
      * @param sSql
+     * @param childQuery 是否子查询
      */
-    protected String fromWhereSqlConvert(String sSql) {
+    protected String fromWhereSqlConvert(String sSql,boolean childQuery) {
         StringBuilder sb = new StringBuilder();
         String sSet = "";
         String sFromWhere = "";
@@ -171,12 +212,18 @@ public abstract class AbstractSqlParser {
             sb.append(whereConvert(sSql));
             return sb.toString();
         }
+
         //2.有FROM，及之后可能存在的WHERE段处理
         sSet = sSql.substring(0, mc.start()).trim();
         sFromWhere = sSql.substring(mc.end()).trim();
 
         //1、查询语句中查询的字段，或更新语句中的更新项
-        sb.append(beforeFromConvert(sSet));//由子类来处理
+        if(childQuery){
+            sb.append(queryBeforeFromConvert(sSet));//由子类来处理
+        }else {
+            sb.append(beforeFromConvert(sSet));//由子类来处理
+        }
+
         sb.append(mc.group());//sbHead添加FROM字符
 
         //2、WHERE段分隔
@@ -198,7 +245,7 @@ public abstract class AbstractSqlParser {
         }
 
         //4 通过各种Join正则式分解语句
-        Matcher mc2 = ToolHelper.getMatcher(sFrom, "\\s*((LEFT)|(RIGHT)|(FULL)|(INNER))?\\s+JOIN\\s*");
+        Matcher mc2 = ToolHelper.getMatcher(sFrom, StaticConstants.joinPattern);
         int iStart2=0;
         String lastJoin = "";//最后一次JOIN语句的字符，这个在while循环外处理最后一段字符时用到
         while (mc2.find()) {
@@ -232,6 +279,8 @@ public abstract class AbstractSqlParser {
         if (!mcWhere.find()) {
             return sb.toString();
         }
+
+
         String sWhereString = mcWhere.group();
 
         //7.GROUP BY的处理
@@ -280,6 +329,7 @@ public abstract class AbstractSqlParser {
                 if(ToolHelper.IsNotNull(sConvertWHere)){
                     sb.append(sWhereString + sConvertWHere);
                 }
+                sb.append(mcOrder.group());
                 sSql = sSql.substring(mcOrder.end());
                 needWhereSplit = false;
                 if(!hasKey(sSql)){
@@ -325,9 +375,17 @@ public abstract class AbstractSqlParser {
 
         //9、最后一段字符的处理
         if(ToolHelper.IsNotNull(sSql.trim())){
-            sb.append(andOrConditionConvert(sSql));
-        }
+            String sWhere = "";
+            if(needWhereSplit){
+                sWhere = sWhereString;//有可能WHERE还未处理
+                sSql = sSql.substring(mcWhere.end());
+            }
 
+            String sSqlFinal = andOrConditionConvert(sSql);
+            if(ToolHelper.IsNotNull(sSqlFinal)){
+                sb.append(sWhere + sSqlFinal);
+            }
+        }
         return sb.toString();
     }
 
@@ -342,7 +400,11 @@ public abstract class AbstractSqlParser {
         Matcher mc = ToolHelper.getMatcher(sCond, StaticConstants.andOrPatter);
         int iStart = 0;
         String sBeforeAndOr = "";
+        boolean hasGoodCondition = false;
         while (mc.find()) {
+            if(!hasGoodCondition){
+                sBeforeAndOr = ""; //只要没有一个条件时，前面的AND或OR为空
+            }
             //2、得到一个AND或OR段
             String oneSql = sCond.substring(iStart,mc.start());
             //查看是否有：##序号##
@@ -353,12 +415,18 @@ public abstract class AbstractSqlParser {
             }
             if(hasKey(oneSql) || parenthesesRounFlag) {
                 //2.1、当键存在，或存在：##序号##时，调用括号键转换处理方法
-                sb.append(complexParenthesesKeyConvert(oneSql, sBeforeAndOr));
+                String sFinalSql = complexParenthesesKeyConvert(oneSql, sBeforeAndOr);
+                if(ToolHelper.IsNotNull(sFinalSql)){
+                    sb.append(sFinalSql);
+                    sBeforeAndOr = mc.group();
+                    hasGoodCondition = true;
+                }
             }else {
                 //2.2、当键存在时，调用括号键转换处理方法
                 sb.append(sBeforeAndOr + oneSql);
+                sBeforeAndOr = mc.group();
+                hasGoodCondition = true;
             }
-            sBeforeAndOr = mc.group();
             iStart = mc.end();
         }
         //最后一个AND或OR之后的的SQL字符串处理，也是调用括号键转换处理方法
@@ -384,7 +452,7 @@ public abstract class AbstractSqlParser {
         }
 
         //2、有 ##序号## 字符的语句分析
-        String sSource = mapsParentheses.get(mc.group());//取出 ##序号## 内容
+        String sSource = mapsParentheses.get(mc.group()).trim();//取出 ##序号## 内容
         if(!hasKey(sSource)){
             //2.1 没有键，得到替换并合并之前的AND或OR字符
             String sConnect = sLastAndOr + sSql.replace(mc.group(),sSource);
@@ -402,6 +470,7 @@ public abstract class AbstractSqlParser {
         while (mc1.find()){
             if(ToolHelper.IsNotNull(singleKeyConvert(mc1.group()))){
                 allKeyNull =false;
+                break;
             }
         }
 
@@ -521,7 +590,7 @@ public abstract class AbstractSqlParser {
         mcChild = ToolHelper.getMatcher(sSource, StaticConstants.selectPattern);//抽取出SELECT部分
         while (mcChild.find()) {
             //4.1 调用查询头部转换方法
-            sb.append(queryHeadSqlConvert(sSource));
+            sb.append(queryHeadSqlConvert(sSource,true));
         }
         sb.append(sEndRight);//追加右括号
         sb.append(sEnd);//追加 ##序号## 之后部分字符
@@ -600,16 +669,16 @@ public abstract class AbstractSqlParser {
      * 注：放这里的原因是INSERT INTO ... SELECT 语句也用到该方法
      * @param sSql
      */
-    protected String queryHeadSqlConvert(String sSql) {
+    protected String queryHeadSqlConvert(String sSql,boolean childQuery) {
         StringBuilder sb = new StringBuilder();
         Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.selectPattern);//抽取出SELECT部分
         if (mc.find()){
-            sb.append(mc.group());//不变的SELECT部分先加入
+            sb.append(mc.group()+" ");//不变的SELECT部分先加入
             sSql = sSql.substring(mc.end()).trim();
-            sb.append(fromWhereSqlConvert(sSql));
+            sb.append(fromWhereSqlConvert(sSql,childQuery));
         } else {
             //传过来的SQL有可能去掉了SELECT部分
-            sb.append(fromWhereSqlConvert(sSql));
+            sb.append(fromWhereSqlConvert(sSql,childQuery));
         }
         return  sb.toString();
     }
@@ -662,21 +731,4 @@ public abstract class AbstractSqlParser {
      */
     protected abstract String beforeFromConvert(String sSql);
 
-    /**
-     * 拆分SQL
-     * @param sSql
-     * @return
-     */
-    protected abstract List<SqlSegment> split(String sSql);
-
-    /**
-     * from段以后的SQL拆分
-     * @param sSql
-     * @return
-     */
-    protected List<SqlSegment> fromSplit(String sSql){
-        List<SqlSegment> sqlList = new ArrayList<>();
-
-        return sqlList;
-    }
 }

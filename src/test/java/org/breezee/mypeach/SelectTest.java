@@ -30,7 +30,7 @@ public class SelectTest {
     void selecet() throws IOException {
         String sSql = new String(Files.readAllBytes(Paths.get(testFilePrefix + "01_Select.txt")));
         Map<String, Object> dicQuery = new HashMap<>();
-        dicQuery.put("PROVINCE_ID","张三");
+        //dicQuery.put("PROVINCE_ID","张三");
         dicQuery.put("#PROVINCE_CODE#","BJ");
         dicQuery.put("#PROVINCE_NAME#","北京");
         dicQuery.put("#DATE#","20222-02-10");
@@ -75,7 +75,7 @@ public class SelectTest {
     void selecetUnion() throws IOException {
         String sSql = new String(Files.readAllBytes(Paths.get(testFilePrefix + "03_SelectUnion.txt")));
         Map<String, Object> dicQuery = new HashMap<>();
-        dicQuery.put("PROVINCE_ID","张三");
+        //dicQuery.put("PROVINCE_ID","张三");
         dicQuery.put("#PROVINCE_CODE#","BJ");
         dicQuery.put("#PROVINCE_NAME#","北京");
         dicQuery.put("#DATE#","20222-02-10");
@@ -92,7 +92,7 @@ public class SelectTest {
         List<Integer> list = new ArrayList<Integer>();
         list.addAll(Arrays.asList(2,3,4));
         dicQuery.put("MDLIST",list);//传入一个数组
-        //SelectSqlParser sqlAnalyzer = new SelectSqlParser(new MyPeachProperties());
+
         //sqlParsers.properties.setTargetSqlParamTypeEnum(TargetSqlParamTypeEnum.DIRECT_RUN);//改变SQL生成方式
         ParserResult result = sqlParsers.parse(SqlTypeEnum.SELECT,sSql, dicQuery);
         System.out.println(result.getMessage());

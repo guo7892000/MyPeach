@@ -33,6 +33,11 @@ public class MyPeachProperties {
     private String paramSuffix = "";
 
     /**
+     * 禁止全表更新或删除：默认是
+     */
+    private boolean forbidAllTableUpdateOrDelete = true;
+
+    /**
      * 名称：生成的SQL类型
      * 描述：
      * TargetSqlEnum.param：参数化的SQL，默认

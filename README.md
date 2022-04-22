@@ -17,10 +17,10 @@ MyPeach是一个动态SQ转换工具，它能根据SQL中配置的键（默认�
     WITH...AS (),WITH...AS () SELECT...FROM...WHERE...
     SELECT。。。UNION ALL SELECT..   
 ```
-* SQL语句键可带内置的校验规则描述，让SQL更安全：  
+* SQL语句键可带内置的校验规则描述，让SQL更安全  
   条件使用：键字符支持'#MDLIST:N:LS#'格式，其中N表示非空，LS表示字符列表，LI为整型列表，即IN括号里的部分字符。  
-* 只生成SQL，不执行。如需使用生成后的参数化SQL，需要从ParserResult中取出参数化列表，即mapQuery属性值，其为Map<string, SqlKeyValueEntity>类型。
-* 生成SQL类型可选参数化、还是字符替换。
+* 只生成SQL，不执行。如需使用生成后的参数化SQL，需要从ParserResult中取出参数化列表，即mapQuery属性值，其为Map<string, SqlKeyValueEntity>类型。  
+* 生成SQL类型可选参数化、还是字符替换；对于字符串值中的单引号，会被剔除掉，然后再在值前后分别加上单引号。  
 ## 背景
 从本人从事软件行业以来，就经常能看到程序中用到拼接SQL，这样不方便调试和修改。在2008年我接触到的一个项目，使用了能根据传入条件动态替换SQL中的键，
 虽然能解决一些常见的SQL，但只要涉及到有函数转换、多个括号内有键、子查询有键等，它就无能为力了，解析出来的SQL就是错的（条件不存在时没有全部去掉），无法运行。

@@ -3,14 +3,9 @@ package org.breezee.mypeach.core;
 import lombok.extern.slf4j.Slf4j;
 import org.breezee.mypeach.autoconfigure.MyPeachProperties;
 import org.breezee.mypeach.config.StaticConstants;
-import org.breezee.mypeach.entity.ParserResult;
-import org.breezee.mypeach.entity.SqlSegment;
-import org.breezee.mypeach.enums.SqlSegmentEnum;
 import org.breezee.mypeach.enums.SqlTypeEnum;
 import org.breezee.mypeach.utils.ToolHelper;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.regex.Matcher;
 
 /**
@@ -36,9 +31,10 @@ public class DeleteSqlParser extends AbstractSqlParser {
         while (mc.find()){
             sb.append(mc.group());//不变的INSERT INTO TABLE_NAME(部分先加入
             //FROM部分SQL处理
-            String sWhereSql = fromWhereSqlConvert(sSql.substring(mc.end()));
-            if(ToolHelper.IsNull(sWhereSql)){
-                mapError.put("严重错误","删除语句不能没有条件，那样会清除整张表数据！");//错误列表
+            String sWhereSql = fromWhereSqlConvert(sSql.substring(mc.end()),false);
+            //如果禁用全表更新，并且条件为空，则抛错！
+            if(ToolHelper.IsNull(sWhereSql) && myPeachProp.isForbidAllTableUpdateOrDelete()){
+                mapError.put("出现全表删除，已停止","删除语句不能没有条件，那样会清除整张表数据！");//错误列表
             }
             sb.append(sWhereSql);
         }
@@ -50,17 +46,4 @@ public class DeleteSqlParser extends AbstractSqlParser {
         return "";
     }
 
-    @Override
-    protected List<SqlSegment> split(String sSql) {
-        List<SqlSegment> list = new ArrayList<>();
-        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.deletePattern);
-        while (mc.find()){
-            SqlSegment segment = new SqlSegment();
-            segment.setHeadString(mc.group());//不变的DELETE FROM部分
-            segment.setSql(sSql.substring(mc.end()));//FROM部分SQL处理
-            segment.setSqlSegmentEnum(SqlSegmentEnum.WHERE_CONDTION);
-            list.add(segment);
-        }
-        return list;
-    }
 }

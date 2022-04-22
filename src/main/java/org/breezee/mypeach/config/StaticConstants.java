@@ -14,6 +14,10 @@ public class StaticConstants {
      */
     public static final String remarkPatter = "--.*|(/\\*.*/*/)";
     /**
+     * 左括号或右括号的正则式
+     */
+    public static final String parenthesesPattern="\\(|\\)";
+    /**
      * AND（或OR）的正则表达式
      */
     public static final String andOrPatter = "\\s+((AND)|(OR))\\s+";
@@ -26,7 +30,10 @@ public class StaticConstants {
      */
     public static final String fromPattern= "\\s*FROM\\s+";//前面为*，是因为有可能在拆分时，去掉了前面的空格
 
-
+    /**
+     * 各种JOIN的正则式
+     */
+    public static final String joinPattern = "\\s*((LEFT)|(RIGHT)|(FULL)|(INNER))?\\s+JOIN\\s*";
     /**
      * SELECT的正则表达式：增加DISTINCT、TOP N的支持
      */

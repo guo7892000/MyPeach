@@ -3,8 +3,6 @@ package org.breezee.mypeach.core;
 import lombok.extern.slf4j.Slf4j;
 import org.breezee.mypeach.autoconfigure.MyPeachProperties;
 import org.breezee.mypeach.config.StaticConstants;
-import org.breezee.mypeach.entity.SqlSegment;
-import org.breezee.mypeach.enums.SqlSegmentEnum;
 import org.breezee.mypeach.enums.SqlTypeEnum;
 import org.breezee.mypeach.utils.ToolHelper;
 
@@ -35,8 +33,12 @@ public class UpdateSqlParser extends AbstractSqlParser {
         while (mc.find()){
             sb.append(mc.group());//不变的UPDATE SET部分先加入
             sSql = sSql.substring(mc.end()).trim();
-            //调用From方法
-            sb.append(fromWhereSqlConvert(sSql));
+            String sFinalSql = fromWhereSqlConvert(sSql,false);//调用From方法
+            //如果禁用全表更新，并且条件为空，则抛错！
+            if(ToolHelper.IsNull(sFinalSql) && myPeachProp.isForbidAllTableUpdateOrDelete()){
+                mapError.put("出现全表更新，已停止","更新语句不能没有条件，那样会更新整张表数据！");//错误列表
+            }
+            sb.append(sFinalSql);
         }
         return sb.toString();
     }
@@ -63,51 +65,4 @@ public class UpdateSqlParser extends AbstractSqlParser {
         }
         return sb.toString();
     }
-
-    @Override
-    protected List<SqlSegment> split(String sSql) {
-        List<SqlSegment> list = new ArrayList<>();
-        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.updateSetPattern);//先截取UPDATE SET部分
-        if (mc.find()){
-            SqlSegment segment = new SqlSegment();
-            segment.setHeadString(mc.group());//不变的UPDATE SET部分
-            sSql = sSql.substring(mc.end()).trim();
-            String sSet = "";
-            //1、拆出至FROM之间的片段:UPDATE是可以有FROM的
-            Matcher mcFrom = ToolHelper.getMatcher(sSql, StaticConstants.fromPattern);
-            if (mcFrom.find()) {
-                //1.1 有FROM
-                sSet = sSql.substring(0,mcFrom.start());
-                String sConvertSql = beforeFromConvert(sSet);
-                //1.2 UPDATE部分
-                segment.setFinalSql(sConvertSql);
-                segment.setNeedParse(false);
-                segment.setSqlSegmentEnum(SqlSegmentEnum.UPDATE_SET);
-                list.add(segment);
-                sSql = sSql.substring(mcFrom.end());
-            }
-
-            Matcher mcWhere = ToolHelper.getMatcher(sSql, StaticConstants.wherePattern);
-            if (mcWhere.find()) {
-                if(ToolHelper.IsNull(sSet)) {
-                    //UPDATE SET如果未处理，那么这里再处理
-                    sSet = sSql.substring(0, mcWhere.start());
-                    String sConvertSql = beforeFromConvert(sSet);
-                    //UPDATE部分
-                    segment.setFinalSql(sConvertSql);
-                    segment.setSqlSegmentEnum(SqlSegmentEnum.UPDATE_SET);
-                    list.add(segment);
-                }
-                //WHER片段部分
-                segment = new SqlSegment();
-                segment.setHeadString(mcWhere.group());//不变的UPDATE SET部分
-                sSql = sSql.substring(mcWhere.end()).trim();
-                segment.setSql(sSql);
-                segment.setSqlSegmentEnum(SqlSegmentEnum.WHERE_CONDTION);
-                list.add(segment);
-            }
-        }
-        return list;
-    }
-
 }
