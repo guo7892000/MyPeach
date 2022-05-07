@@ -34,8 +34,9 @@ public abstract class AbstractSqlParser {
      * 如其跟键前缀重复，则会在后面增加一个#号
      *
      */
-    private String parenthesesRoundKey = "##";
-    private String parenthesesRoundKeyPattern = parenthesesRoundKey + "\\d+" + parenthesesRoundKey;
+    private String parenthesesRoundKey = StaticConstants.parenthesesRoundKey;
+    private String parenthesesRoundKeyPattern;
+    protected String withSelectPartn;
 
     protected Map<String, SqlKeyValueEntity> mapSqlKey;//SQL中所有键
     protected Map<String, SqlKeyValueEntity> mapSqlKeyValid;//SQL中有传值的所有键
@@ -66,6 +67,9 @@ public abstract class AbstractSqlParser {
         if(parenthesesRoundKey.equals(keyPrefix)){
             parenthesesRoundKey+=StaticConstants.HASH;
         }
+        parenthesesRoundKeyPattern = parenthesesRoundKey + "\\d+" + parenthesesRoundKey;
+        //因为括号已被替换为##序号##，所以原正则式已不能使用："\\)?\\s*,?\\s*WITH\\s+\\w+\\s+AS\\s*\\("+commonSelectPattern;
+        withSelectPartn = "\\s*,?\\s*WITH\\s+\\w+\\s+AS\\s+" + parenthesesRoundKeyPattern;
 
         mapsParentheses = new HashMap<>();
         mapSqlKey = new HashMap<>();
@@ -157,10 +161,11 @@ public abstract class AbstractSqlParser {
         Matcher mc;
         StringBuilder sb = new StringBuilder();
         mc = ToolHelper.getMatcher(sSql, StaticConstants.parenthesesPattern);
-        int iGroup = 0;//第几组括号
+        //int iGroup = 0;//第几组括号
         int iLeft = 0;//左括号数
         int iRight = 0;//右括号数
         int iGroupStart = 0;//组开始的位置
+
         while (mc.find()) {
             if("(".equals(mc.group())){
                 iLeft++;
@@ -173,13 +178,13 @@ public abstract class AbstractSqlParser {
             }
             //判断是否是一组数据
             if(iLeft == iRight){
-                String sKey = parenthesesRoundKey + String.valueOf(iGroup) + parenthesesRoundKey;
+                String sKey = parenthesesRoundKey + String.valueOf(mapsParentheses.size()) + parenthesesRoundKey;
                 //符合左右括号正则式的内容，替换为：##序号##。把最外面的左右括号也放进去
                 String sParenthesesSql = "(" + sSql.substring(iGroupStart,mc.start()) + mc.group();
                 mapsParentheses.put(sKey,sParenthesesSql);
                 sb.append(sKey);//注：不要包括右括号
                 iGroupStart = mc.end();//下一个语句的开始
-                iGroup++;
+                //iGroup++;
                 iLeft = 0;
                 iRight = 0;
             }
@@ -190,6 +195,10 @@ public abstract class AbstractSqlParser {
         }
 
         String sNewSql = sb.toString();
+        if(ToolHelper.IsNull(sNewSql)){
+            //没有括号时，调用子查询方法
+            return queryHeadSqlConvert(sSql,true);
+        }
         return sNewSql;
     }
 
@@ -247,10 +256,15 @@ public abstract class AbstractSqlParser {
         //4 通过各种Join正则式分解语句
         Matcher mc2 = ToolHelper.getMatcher(sFrom, StaticConstants.joinPattern);
         int iStart2=0;
+        int iCount = 0;
         String lastJoin = "";//最后一次JOIN语句的字符，这个在while循环外处理最后一段字符时用到
         while (mc2.find()) {
             String oneJoin = sFrom.substring(iStart2,mc2.start());//第一条JOIN语句
             lastJoin = mc2.group();
+            if(iCount > 0){
+                sb.append(lastJoin);
+            }
+            iCount++;
             if(!hasKey(oneJoin)){
                 //没有参数，直接拼接
                 sb.append(oneJoin);
@@ -261,13 +275,16 @@ public abstract class AbstractSqlParser {
             //AND和OR的条件转换
             sb.append(andOrConditionConvert(oneJoin));
             iStart2 = mc2.end();
+
         }
         sb.append(lastJoin);
         //5 之前正则式中最后一段SQL的AND和OR的条件转换
-        sb.append(andOrConditionConvert(sFrom.substring(iStart2)));
+        String sLastFrom = andOrConditionConvert(sFrom.substring(iStart2));
+        sb.append(sLastFrom);
 
         //6.WHERE段的SQL处理
-        sb.append(whereConvert(sWhere));
+        String sConvertWhere = whereConvert(sWhere);
+        sb.append(sConvertWhere);
 
         return sb.toString();
     }
@@ -430,7 +447,8 @@ public abstract class AbstractSqlParser {
             iStart = mc.end();
         }
         //最后一个AND或OR之后的的SQL字符串处理，也是调用括号键转换处理方法
-        sb.append(complexParenthesesKeyConvert(sCond.substring(iStart),sBeforeAndOr));
+        String sComplexSql = complexParenthesesKeyConvert(sCond.substring(iStart),sBeforeAndOr);
+        sb.append(sComplexSql);
 
         return sb.toString();
     }
@@ -476,6 +494,7 @@ public abstract class AbstractSqlParser {
 
         String sPre = sSql.substring(0, mc.start());
         String sEnd = sSql.substring(mc.end());
+
         //3、子查询处理
         String sChildQuery = childQueryConvert(sLastAndOr + sPre, sEnd, sSource);
         sb.append(sChildQuery);//加上子查询
@@ -584,13 +603,17 @@ public abstract class AbstractSqlParser {
             }
         }
 
+        //子查询中又可能存在子查询，所以这里还要对括号进一步分析
+        sSource = generateParenthesesKey(sSource);
+
         /** 4、子查询又相当于一个SELECT语句，这里又存在FROM和WHERE处理，所以这部分是根据SELECT模式，再解析一次。
         *   这就是为何将queryHeadSqlConvert和queryBeforeFromConvert放在本抽象父类的缘故。
         */
         mcChild = ToolHelper.getMatcher(sSource, StaticConstants.selectPattern);//抽取出SELECT部分
         while (mcChild.find()) {
             //4.1 调用查询头部转换方法
-            sb.append(queryHeadSqlConvert(sSource,true));
+            String sSqlChild = queryHeadSqlConvert(sSource,true);
+            sb.append(sSqlChild);
         }
         sb.append(sEndRight);//追加右括号
         sb.append(sEnd);//追加 ##序号## 之后部分字符
@@ -673,12 +696,14 @@ public abstract class AbstractSqlParser {
         StringBuilder sb = new StringBuilder();
         Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.selectPattern);//抽取出SELECT部分
         if (mc.find()){
-            sb.append(mc.group()+" ");//不变的SELECT部分先加入
+            sb.append(mc.group());//不变的SELECT部分先加入
             sSql = sSql.substring(mc.end()).trim();
-            sb.append(fromWhereSqlConvert(sSql,childQuery));
+            String sFinalSql = fromWhereSqlConvert(sSql,childQuery);
+            sb.append(sFinalSql);
         } else {
             //传过来的SQL有可能去掉了SELECT部分
-            sb.append(fromWhereSqlConvert(sSql,childQuery));
+            String sFinalSql = fromWhereSqlConvert(sSql,childQuery);
+            sb.append(sFinalSql);
         }
         return  sb.toString();
     }

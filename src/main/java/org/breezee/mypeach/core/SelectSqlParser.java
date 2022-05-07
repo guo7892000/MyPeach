@@ -57,30 +57,18 @@ public class SelectSqlParser extends AbstractSqlParser {
      * @return
      */
     private String withSelectConvert(String sSql, StringBuilder sbHead) {
-        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.withSelectPartn);
+        Matcher mc = ToolHelper.getMatcher(sSql, withSelectPartn);
         int iStart = 0;
         while (mc.find()) {
             sqlTypeEnum = SqlTypeEnum.SELECT_WITH_AS;
-            String sOneSql = sSql.substring(iStart,mc.start()).trim();
-            if(ToolHelper.IsNotNull(sOneSql)){
-                //通用的以Select开头的处理
-                sbHead.append(queryHeadSqlConvert(sOneSql,true));
-            }
-            sbHead.append(mc.group());
+            String sOneSql = complexParenthesesKeyConvert(mc.group(),"");//##序号##处理
+            sbHead.append(sOneSql);
             iStart = mc.end();
         }
         if(iStart>0) {
+            sbHead.append(System.lineSeparator());
             sSql = sSql.substring(iStart).trim();//去掉之前处理过的部分
-            //匹配【)SELECT】部分
-            mc = ToolHelper.getMatcher(sSql, StaticConstants.withSelectPartnToSelect);
-            while (mc.find()) {
-                String sOneSql = sSql.substring(0,mc.start()).trim();
-                //通用的以Select开头的处理
-                sbHead.append(queryHeadSqlConvert(sOneSql,true));
-
-                sSql = sSql.substring(mc.end() - mc.group().length() + 1).trim();
-                sbHead.append(")" + System.lineSeparator());
-            }
+            sSql = queryHeadSqlConvert(sSql,true);//通用的以Select开头的处理
         }
         return sSql;
     }

@@ -9,6 +9,12 @@ package org.breezee.mypeach.config;
  * @date: 2022/4/12 16:45
  */
 public class StaticConstants {
+    public static final String parenthesesRoundKey = "##";
+    public static final String LEFT_BRACE = "{";
+    public static final String HASH_LEFT_BRACE = "#{";
+    public static final String RIGHT_BRACE = "}";
+    public static final String HASH = "#";
+    public static final String PERCENT = "%";
     /**
      * sql备注的正则表达式：支持--和/***\/
      */
@@ -48,12 +54,6 @@ public class StaticConstants {
      * SELECT子查询的正则表达式：增加DISTINCT、TOP N的支持
      */
     public static final String childSelectPattern = "\\(" + commonSelectPattern;
-
-    /**
-     * 以WITH开头的特殊查询，例如：with table_tmp as (SELECT ),with table_tmp2 as (SELECT ) SELECT 。。。
-     */
-    public static final String withSelectPartn = "\\)?\\s*,?\\s*WITH\\s+\\w+\\s+AS\\s*\\("+commonSelectPattern;
-
     /**
      * 【withSelect最后的字符)SELECT】正则式，即真正开始查询的语句开始
      */
@@ -86,9 +86,4 @@ public class StaticConstants {
     public static final String updateSetPattern = "^UPDATE\\s*\\S*\\s*SET\\s*";//正则式：UPDATE TABLE_NAME SET
     public static final String deletePattern = "^DELETE\\s+FROM\\s+\\S+\\s+"; //正则式:DELETE FROM TABALE_NAME
 
-    public static final String LEFT_BRACE = "{";
-    public static final String HASH_LEFT_BRACE = "#{";
-    public static final String RIGHT_BRACE = "}";
-    public static final String HASH = "#";
-    public static final String PERCENT = "%";
 }

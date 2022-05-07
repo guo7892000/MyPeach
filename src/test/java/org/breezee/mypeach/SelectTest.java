@@ -38,6 +38,7 @@ public class SelectTest {
         dicQuery.put("SORT_ID",20);
         dicQuery.put("#REMARK#","测试");
         dicQuery.put("PAGE_SIZE",8);
+        //dicQuery.put("TNAME","TF");
         //dicQuery.put("BF","back");
         //dicQuery.put("MDLIST",new String[]{"SE","PA","FI"});//传入一个数组
 //        List<String> list = new ArrayList<String>();
@@ -65,7 +66,9 @@ public class SelectTest {
         dicQuery.put("#PROVINCE_NAME#","北京");
         dicQuery.put("#DATE#","20222-02-10");
         dicQuery.put("NAME",1);
-        //dicQuery.put("BF","back");
+        dicQuery.put("CREATOR","back");
+        dicQuery.put("CREATOR1","back");
+        dicQuery.put("GF","back");
         //SelectSqlParser sqlAnalyzer = new SelectSqlParser(new MyPeachProperties());
         ParserResult result = sqlParsers.parse(SqlTypeEnum.SELECT_WITH_AS,sSql, dicQuery);
         System.out.println(result.getCode().equals("0")?result.getSql():result.getMessage());//0转换成功，返回SQL；1转换失败，返回错误信息
