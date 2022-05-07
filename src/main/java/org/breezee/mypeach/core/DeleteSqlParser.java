@@ -2,11 +2,11 @@ package org.breezee.mypeach.core;
 
 import lombok.extern.slf4j.Slf4j;
 import org.breezee.mypeach.autoconfigure.MyPeachProperties;
+import org.breezee.mypeach.config.StaticConstants;
 import org.breezee.mypeach.enums.SqlTypeEnum;
 import org.breezee.mypeach.utils.ToolHelper;
 
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * @objectName:Delete Sql Analyzer(删除SQL分析器)
@@ -18,7 +18,6 @@ import java.util.regex.Pattern;
  */
 @Slf4j
 public class DeleteSqlParser extends AbstractSqlParser {
-    String sDeletePattern = "^DELETE\\s+FROM\\s+\\S+\\s+"; //正则式:DELETE FROM TABALE_NAME
 
     public DeleteSqlParser(MyPeachProperties properties) {
         super(properties);
@@ -28,11 +27,16 @@ public class DeleteSqlParser extends AbstractSqlParser {
     @Override
     public String headSqlConvert(String sSql) {
         StringBuilder sb = new StringBuilder();
-        Matcher mc = ToolHelper.getMatcher(sSql, sDeletePattern);//抽取出INSERT INTO TABLE_NAME(部分
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.deletePattern);//抽取出INSERT INTO TABLE_NAME(部分
         while (mc.find()){
             sb.append(mc.group());//不变的INSERT INTO TABLE_NAME(部分先加入
             //FROM部分SQL处理
-            sb.append(fromSqlConvert(sSql.substring(mc.end())));
+            String sWhereSql = fromWhereSqlConvert(sSql.substring(mc.end()),false);
+            //如果禁用全表更新，并且条件为空，则抛错！
+            if(ToolHelper.IsNull(sWhereSql) && myPeachProp.isForbidAllTableUpdateOrDelete()){
+                mapError.put("出现全表删除，已停止","删除语句不能没有条件，那样会清除整张表数据！");//错误列表
+            }
+            sb.append(sWhereSql);
         }
         return sb.toString();
     }

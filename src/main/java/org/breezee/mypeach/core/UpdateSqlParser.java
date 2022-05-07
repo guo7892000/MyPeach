@@ -2,11 +2,13 @@ package org.breezee.mypeach.core;
 
 import lombok.extern.slf4j.Slf4j;
 import org.breezee.mypeach.autoconfigure.MyPeachProperties;
+import org.breezee.mypeach.config.StaticConstants;
 import org.breezee.mypeach.enums.SqlTypeEnum;
 import org.breezee.mypeach.utils.ToolHelper;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * @objectName: 更新SQL分析器
@@ -18,25 +20,25 @@ import java.util.regex.Pattern;
  * @wechat: BreezeeHui
  * @date: 2022/4/12 16:45
  */
-@Slf4j
 public class UpdateSqlParser extends AbstractSqlParser {
     public UpdateSqlParser(MyPeachProperties properties) {
         super(properties);
         sqlTypeEnum = SqlTypeEnum.UPDATE;
     }
 
-    String sUpdateSetPattern = "^UPDATE\\s*\\S*\\s*SET\\s*";//正则式：UPDATE TABLE_NAME SET
-    String sSetEqualPattern = "\\s*,\\s*?(\\[|`)?\\w+(]|`)";//正则式：set段中的赋值部分
-
     @Override
     public String headSqlConvert(String sSql) {
         StringBuilder sb = new StringBuilder();
-        Matcher mc = ToolHelper.getMatcher(sSql, sUpdateSetPattern);//先截取UPDATE SET部分
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.updateSetPattern);//先截取UPDATE SET部分
         while (mc.find()){
             sb.append(mc.group());//不变的UPDATE SET部分先加入
             sSql = sSql.substring(mc.end()).trim();
-            //调用From方法
-            sb.append(fromSqlConvert(sSql));
+            String sFinalSql = fromWhereSqlConvert(sSql,false);//调用From方法
+            //如果禁用全表更新，并且条件为空，则抛错！
+            if(ToolHelper.IsNull(sFinalSql) && myPeachProp.isForbidAllTableUpdateOrDelete()){
+                mapError.put("出现全表更新，已停止","更新语句不能没有条件，那样会更新整张表数据！");//错误列表
+            }
+            sb.append(sFinalSql);
         }
         return sb.toString();
     }
@@ -52,7 +54,7 @@ public class UpdateSqlParser extends AbstractSqlParser {
                 continue;
             }
 
-            sb.append(parenthesesKeyConvert(sComma + col,""));
+            sb.append(complexParenthesesKeyConvert(sComma + col,""));
 
             if(sComma.isEmpty()){
                 String sKey = getFirstKeyName(col);
@@ -63,5 +65,4 @@ public class UpdateSqlParser extends AbstractSqlParser {
         }
         return sb.toString();
     }
-
 }

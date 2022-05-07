@@ -2,13 +2,13 @@ package org.breezee.mypeach.core;
 
 import lombok.extern.slf4j.Slf4j;
 import org.breezee.mypeach.autoconfigure.MyPeachProperties;
+import org.breezee.mypeach.config.StaticConstants;
 import org.breezee.mypeach.enums.SqlTypeEnum;
 import org.breezee.mypeach.utils.ToolHelper;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import static java.util.regex.Pattern.CASE_INSENSITIVE;
 
 /**
  * @objectName:
@@ -20,10 +20,6 @@ import static java.util.regex.Pattern.CASE_INSENSITIVE;
  */
 @Slf4j
 public class SelectSqlParser extends AbstractSqlParser {
-    //针对Oracle中以WITH开头的特殊查询，例如：with table_tmp as (),with table_tmp2 as () SELECT 。。。
-    private final String sOracleWithSelectPartn = "\\)?\\s*,?\\s*WITH\\s+\\w+\\s+AS\\s*\\(";
-    //【)SELECT】部分正则式，找出之后SELECT语句
-    private final String sOracleWithSelectPartnToSelect = "\\)\\s*SELECT\\s+";
 
     public SelectSqlParser(MyPeachProperties properties) {
         super(properties);
@@ -33,9 +29,25 @@ public class SelectSqlParser extends AbstractSqlParser {
     @Override
     protected String headSqlConvert(String sSql) {
         StringBuilder sbHead = new StringBuilder();
-        sSql = OracleWithSelectConvert(sSql,sbHead);
-        //通用的以Select开头的处理
-        sbHead.append(queryHeadSqlConvert(sSql));
+        sSql = withSelectConvert(sSql,sbHead);
+        //UNION和UNION ALL处理
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.unionAllPartner);
+        int iStart=0;
+        while(mc.find()){
+            String sOne = sSql.substring(iStart,mc.start());
+            String sConvertSql = queryHeadSqlConvert(sOne,false);
+            sbHead.append(sConvertSql);
+            iStart = mc.end();
+            sbHead.append(mc.group());
+        }
+        if(iStart>0){
+            String sOne = sSql.substring(iStart);
+            String sConvertSql = queryHeadSqlConvert(sOne,false);
+            sbHead.append(sConvertSql);
+        }else {
+            String sConvertSql = queryHeadSqlConvert(sSql,false);
+            sbHead.append(sConvertSql);//通用的以Select开头的处理
+        }
         return sbHead.toString();
     }
 
@@ -44,31 +56,19 @@ public class SelectSqlParser extends AbstractSqlParser {
      * @param sSql
      * @return
      */
-    private String OracleWithSelectConvert(String sSql,StringBuilder sbHead) {
-        Matcher mc = ToolHelper.getMatcher(sSql, sOracleWithSelectPartn);
+    private String withSelectConvert(String sSql, StringBuilder sbHead) {
+        Matcher mc = ToolHelper.getMatcher(sSql, withSelectPartn);
         int iStart = 0;
         while (mc.find()) {
             sqlTypeEnum = SqlTypeEnum.SELECT_WITH_AS;
-            String sOneSql = sSql.substring(iStart,mc.start()).trim();
-            if(ToolHelper.IsNotNull(sOneSql)){
-                //通用的以Select开头的处理
-                sbHead.append(queryHeadSqlConvert(sOneSql));
-            }
-            sbHead.append(mc.group());
+            String sOneSql = complexParenthesesKeyConvert(mc.group(),"");//##序号##处理
+            sbHead.append(sOneSql);
             iStart = mc.end();
         }
         if(iStart>0) {
+            sbHead.append(System.lineSeparator());
             sSql = sSql.substring(iStart).trim();//去掉之前处理过的部分
-            //匹配【)SELECT】部分
-            mc = ToolHelper.getMatcher(sSql, sOracleWithSelectPartnToSelect);
-            while (mc.find()) {
-                String sOneSql = sSql.substring(0,mc.start()).trim();
-                //通用的以Select开头的处理
-                sbHead.append(queryHeadSqlConvert(sOneSql));
-
-                sSql = sSql.substring(mc.end() - mc.group().length() + 1).trim();
-                sbHead.append(")" + System.lineSeparator());
-            }
+            sSql = queryHeadSqlConvert(sSql,true);//通用的以Select开头的处理
         }
         return sSql;
     }
@@ -77,6 +77,5 @@ public class SelectSqlParser extends AbstractSqlParser {
     protected String beforeFromConvert(String sSql) {
         return queryBeforeFromConvert(sSql);
     }
-
 
 }
