@@ -78,13 +78,14 @@ public class SelectTest {
     void selecetUnion() throws IOException {
         String sSql = new String(Files.readAllBytes(Paths.get(testFilePrefix + "03_SelectUnion.txt")));
         Map<String, Object> dicQuery = new HashMap<>();
-        //dicQuery.put("PROVINCE_ID","张三");
+        dicQuery.put("PROVINCE_ID","张三");
         dicQuery.put("#PROVINCE_CODE#","BJ");
         dicQuery.put("#PROVINCE_NAME#","北京");
         dicQuery.put("#DATE#","20222-02-10");
         dicQuery.put("NAME",1);
         dicQuery.put("TFLG",1);
         dicQuery.put("#REMARK#","测试");
+        dicQuery.put("TNAME","222");
         //dicQuery.put("BF","back");
         //dicQuery.put("MDLIST",new String[]{"SE","PA","FI"});//传入一个数组
 //        List<String> list = new ArrayList<String>();

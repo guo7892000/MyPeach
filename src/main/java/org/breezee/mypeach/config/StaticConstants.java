@@ -43,7 +43,7 @@ public class StaticConstants {
     /**
      * SELECT的正则表达式：增加DISTINCT、TOP N的支持
      */
-    public static final String selectPattern = "^SELECT\\s+(DISTINCT|TOP\\s+\\d+\\s+)?";
+    public static final String selectPattern = "^SELECT\\s+(DISTINCT|TOP\\s+\\d+\\s+)?\\s*";
 
     /**
      * SELECT查询的通用正则表达式：增加DISTINCT、TOP N的支持
@@ -80,9 +80,16 @@ public class StaticConstants {
      * LIMIT的正则表达式
      */
     public static final String limitPattern= "\\s+LIMIT\\s+";
-    public static final String valuesPattern = "\\)\\s*VALUES\\s*\\(\\s*"; //正则式：)VALUES(
-    public static final String insertIntoPattern = "^INSERT\\s+INTO\\s+\\S+\\s*\\(\\s*";//正则式：INSERT INTO TABLE_NAME(
-    public static final String insertSelectPattern = "\\s*\\)" + commonSelectPattern;
+    /**
+     * VALUES正则式：)VALUES(，但括号部分已被替换，所以旧正则式已不适用："\\)\\s*VALUES\\s*\\(\\s*"
+     */
+    public static final String valuesPattern = "\\s*VALUES\\s*"; //正则式：)VALUES(
+    /**
+     * INSERT INTO正则式：INSERT INTO TABLE_NAME(，但括号部分已被替换，所以旧正则式已不适用："^INSERT\\s+INTO\\s+\\S+\\s*\\(\\s*"
+     */
+    public static final String insertIntoPattern = "^INSERT\\s+INTO\\s+\\S+\\s*";
+
+    //public static final String insertSelectPattern = "\\s*\\)" + commonSelectPattern;
     public static final String updateSetPattern = "^UPDATE\\s*\\S*\\s*SET\\s*";//正则式：UPDATE TABLE_NAME SET
     public static final String deletePattern = "^DELETE\\s+FROM\\s+\\S+\\s+"; //正则式:DELETE FROM TABALE_NAME
 

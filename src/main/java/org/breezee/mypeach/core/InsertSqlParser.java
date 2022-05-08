@@ -30,20 +30,23 @@ public class InsertSqlParser extends AbstractSqlParser {
     @Override
     public String headSqlConvert(String sSql){
         StringBuilder sbHead = new StringBuilder();
+
         sSql = insertValueConvert(sSql,sbHead);
         if(ToolHelper.IsNull(sSql)){
-            return sbHead.toString();
+            return sbHead.toString();//当是INSERT INTO...VALUES...方式，则方法会返回空
         }
 
         //4、INSERT INTO TABLE_NAME 。。 SELECT形式
-        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.insertSelectPattern);//抽取出INSERT INTO TABLE_NAME(部分
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.commonSelectPattern);//抽取出INSERT INTO TABLE_NAME(部分
         while (mc.find()){
             sqlTypeEnum = SqlTypeEnum.INSERT_SELECT;
             String sInsert = sSql.substring(0,mc.start()) + mc.group();
+            sInsert = complexParenthesesKeyConvert(sInsert,"");
             sbHead.append(sInsert);//不变的INSERT INTO TABLE_NAME(部分先加入
             sSql = sSql.substring(mc.end()).trim();
             //FROM段处理
-            sbHead.append(fromWhereSqlConvert(sSql,false));
+            String sFinalSql = fromWhereSqlConvert(sSql,false);
+            sbHead.append(sFinalSql);
         }
         return sbHead.toString();
     }
@@ -70,7 +73,7 @@ public class InsertSqlParser extends AbstractSqlParser {
         StringBuilder sbTail = new StringBuilder();
         //1、抽取出INSERT INTO TABLE_NAME(部分
         Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.insertIntoPattern);
-        while (mc.find()){
+        if (mc.find()){
             sbHead.append(mc.group());//不变的INSERT INTO TABLE_NAME(部分先加入
             sSql = sSql.substring(mc.end()).trim();
         }
@@ -80,9 +83,15 @@ public class InsertSqlParser extends AbstractSqlParser {
         String sInsert ="";
         String sPara="";
         if (mc.find()){
-            sInsert = sSql.substring(0,mc.start()).trim();
-            sPara = sSql.substring(mc.end()).trim();
-            sbTail.append(mc.group());//不变的)VALUES(部分先加入
+            String sInsertKey = sSql.substring(0,mc.start()).trim();
+            String sParaKey = sSql.substring(mc.end()).trim();
+
+            sInsert = ToolHelper.removeBeginEndparentheses(mapsParentheses.get(sInsertKey));
+            sPara = ToolHelper.removeBeginEndparentheses(mapsParentheses.get(sParaKey));
+            sPara = generateParenthesesKey(sPara);//针对有括号的部分先替换为##序号##
+
+            sbHead.append("(");//不变的INSERT INTO TABLE_NAME(部分先加入
+            sbTail.append(mc.group()+ "(");//不变的)VALUES(部分先加入
 
             //3、 insert into ... values形式
             String[] colArray = sInsert.split(",");
@@ -90,7 +99,8 @@ public class InsertSqlParser extends AbstractSqlParser {
 
             int iGood = 0;
             for (int i = 0; i < colArray.length; i++) {
-                String sParamSql = singleKeyConvert(paramArray[i]);
+                String sOneParam = paramArray[i];
+                String sParamSql = complexParenthesesKeyConvert(sOneParam,"");
                 if(ToolHelper.IsNotNull(sParamSql)){
                     if(iGood==0){
                         sbHead.append( colArray[i]);
@@ -102,10 +112,8 @@ public class InsertSqlParser extends AbstractSqlParser {
                     iGood++;
                 }
             }
-
-            if(!sbTail.toString().endsWith(")")){
-                sbTail.append(")");
-            }
+            sbHead.append(")");
+            sbTail.append(")");
             sSql = "";//处理完毕清空SQL
         }
         sb.append(sbHead.toString()+sbTail.toString());

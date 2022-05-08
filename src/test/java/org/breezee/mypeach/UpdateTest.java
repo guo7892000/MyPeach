@@ -35,6 +35,7 @@ public class UpdateTest {
         dicQuery.put("#PROVINCE_CODE#","BJ");
         //dicQuery.put("#PROVINCE_NAME#","北京");
         dicQuery.put("#TFLG#",1);
+        dicQuery.put("MODIFIER","lisi");
         //UpdateSqlParser sqlAnalyzer = new UpdateSqlParser(new MyPeachProperties());
         ParserResult result = sqlParsers.parse(SqlTypeEnum.UPDATE,sSql, dicQuery);
         System.out.println(result.getCode().equals("0")?result.getSql():result.getMessage());//0转换成功，返回SQL；1转换失败，返回错误信息
