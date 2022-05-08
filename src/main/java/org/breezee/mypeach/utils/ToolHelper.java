@@ -77,4 +77,12 @@ public class ToolHelper {
         Pattern regexInner = Pattern.compile(sPattern, CASE_INSENSITIVE);//先根据WHERE关键字将字符分隔为两部分
         return regexInner.matcher(sSql);
     }
+
+    public static String removeBeginEndparentheses(String sSql){
+        sSql = sSql.trim();
+        sSql = sSql.startsWith("(")?sSql.substring(1):sSql;
+        sSql = sSql.endsWith(")")?sSql.substring(0,sSql.length()-1):sSql;
+
+        return sSql;
+    }
 }

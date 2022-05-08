@@ -157,7 +157,7 @@ public abstract class AbstractSqlParser {
      * @param sSql
      * @return
      */
-    private String generateParenthesesKey(String sSql) {
+    protected String generateParenthesesKey(String sSql) {
         Matcher mc;
         StringBuilder sb = new StringBuilder();
         mc = ToolHelper.getMatcher(sSql, StaticConstants.parenthesesPattern);
@@ -297,7 +297,7 @@ public abstract class AbstractSqlParser {
             return sb.toString();
         }
 
-
+        //sb.append(sSql.substring(0,mcWhere.start()));//确定FROM部分
         String sWhereString = mcWhere.group();
 
         //7.GROUP BY的处理
@@ -502,7 +502,8 @@ public abstract class AbstractSqlParser {
             return sb.toString();//如果全部参数为空，或者子查询已处理，直接返回
         }
         //4、有键值传入，并且非子查询，做AND或OR正则匹配分拆字符
-        sb.append(sLastAndOr + sSql.replace(mc.group(),""));//因为不能移除"()"，所以这里先拼接收"AND"或"OR"
+        sb.append(sLastAndOr + sPre);//因为不能移除"()"，所以这里先拼接收"AND"或"OR"，记得加上头部字符
+
         //AND或OR正则匹配处理
         // 注：此处虽然与【andOrConditionConvert】有点类似，但有不同，不能将以下代码替换为andOrConditionConvert方法调用
         Matcher mc2 = ToolHelper.getMatcher(sSource, StaticConstants.andOrPatter);
@@ -519,7 +520,7 @@ public abstract class AbstractSqlParser {
         }
         //4.2 最后一个AND或OR之后的的SQL字符串处理，也是调用【括号SQL段转换方法】
         sValue = parenthesesConvert(sSource.substring(iStart),beforeAndOr);
-        sb.append(sValue);
+        sb.append(sValue + sEnd);//加上尾部字符
 
         return sb.toString();
     }
@@ -531,7 +532,7 @@ public abstract class AbstractSqlParser {
      * @param sSql 只有一个key的字符（即已经过AND或OR的正则表达式匹配后分拆出来的部分字符）
      * @param sLastAndOr 前一个拼接的AND或OR字符
      */
-    private String parenthesesConvert(String sSql, String sLastAndOr) {
+    protected String parenthesesConvert(String sSql, String sLastAndOr) {
         //1、剔除开头的一个或多个左括号，并且把这些左括号记录到变量中，方便后面拼接
         String sOne = sSql;
         String sStartsParentheses="";
@@ -605,15 +606,18 @@ public abstract class AbstractSqlParser {
 
         //子查询中又可能存在子查询，所以这里还要对括号进一步分析
         sSource = generateParenthesesKey(sSource);
-
-        /** 4、子查询又相当于一个SELECT语句，这里又存在FROM和WHERE处理，所以这部分是根据SELECT模式，再解析一次。
-        *   这就是为何将queryHeadSqlConvert和queryBeforeFromConvert放在本抽象父类的缘故。
-        */
-        mcChild = ToolHelper.getMatcher(sSource, StaticConstants.selectPattern);//抽取出SELECT部分
-        while (mcChild.find()) {
-            //4.1 调用查询头部转换方法
-            String sSqlChild = queryHeadSqlConvert(sSource,true);
-            sb.append(sSqlChild);
+        if(!hasKey(sSource)){
+            sb.append(sSource);//这里有可能已处理完子查询
+        } else {
+            /** 4、子查询又相当于一个SELECT语句，这里又存在FROM和WHERE处理，所以这部分是根据SELECT模式，再解析一次。
+             *   这就是为何将queryHeadSqlConvert和queryBeforeFromConvert放在本抽象父类的缘故。
+             */
+            mcChild = ToolHelper.getMatcher(sSource, StaticConstants.selectPattern);//抽取出SELECT部分
+            while (mcChild.find()) {
+                //4.1 调用查询头部转换方法
+                String sSqlChild = queryHeadSqlConvert(sSource,true);
+                sb.append(sSqlChild);
+            }
         }
         sb.append(sEndRight);//追加右括号
         sb.append(sEnd);//追加 ##序号## 之后部分字符
