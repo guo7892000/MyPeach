@@ -39,7 +39,7 @@ public class StaticConstants {
     /**
      * 各种JOIN的正则式
      */
-    public static final String joinPattern = "\\s*((LEFT)|(RIGHT)|(FULL)|(INNER))?\\s+JOIN\\s*";
+    public static final String joinPattern = "\\s*((((LEFT)|(RIGHT)|(FULL))\\s*(OUTER)?)|(INNER)|(CROSS))?\\s+JOIN\\s*";
     /**
      * SELECT的正则表达式：增加DISTINCT、TOP N的支持
      */

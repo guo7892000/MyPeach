@@ -18,9 +18,20 @@ import static java.util.regex.Pattern.CASE_INSENSITIVE;
  * @date: 2022/4/14 16:23
  */
 public class ToolHelper {
+    /**
+     * 判断对象是否非空
+     * @param obj
+     * @return
+     */
     public static boolean IsNotNull(Object obj){
         return obj != null &&  !String.valueOf(obj).trim().isEmpty();
     }
+
+    /**
+     * 判断对象是否为空
+     * @param obj
+     * @return
+     */
     public static boolean IsNull(Object obj){
         return obj == null ||  String.valueOf(obj).trim().isEmpty();
     }
@@ -78,6 +89,11 @@ public class ToolHelper {
         return regexInner.matcher(sSql);
     }
 
+    /**
+     * 移除SQL前后括号
+     * @param sSql
+     * @return
+     */
     public static String removeBeginEndparentheses(String sSql){
         sSql = sSql.trim();
         sSql = sSql.startsWith("(")?sSql.substring(1):sSql;

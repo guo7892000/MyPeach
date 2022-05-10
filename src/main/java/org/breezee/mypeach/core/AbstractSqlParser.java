@@ -79,9 +79,9 @@ public abstract class AbstractSqlParser {
 
     /**
      * 转换SQL（主入口方法）
-     * @param sSql
-     * @param dic
-     * @return
+     * @param sSql 要转换的SQL
+     * @param dic SQL键配置的值
+     * @return 返回转换结果
      */
     public ParserResult parse(String sSql, Map<String, Object> dic){
 
@@ -218,7 +218,8 @@ public abstract class AbstractSqlParser {
         //因为只会有一个FROM，所以这里不用WHILE，而使用if
         if(!mc.find()){
             //1。没有FROM语句
-            sb.append(whereConvert(sSql));
+            String sFinalWhere = whereConvert(sSql);
+            sb.append(sFinalWhere);
             return sb.toString();
         }
 
@@ -228,9 +229,11 @@ public abstract class AbstractSqlParser {
 
         //1、查询语句中查询的字段，或更新语句中的更新项
         if(childQuery){
-            sb.append(queryBeforeFromConvert(sSet));//由子类来处理
+            String sFinalBeforeFrom = queryBeforeFromConvert(sSet);
+            sb.append(sFinalBeforeFrom);//由子类来处理
         }else {
-            sb.append(beforeFromConvert(sSet));//由子类来处理
+            String sFinalBeforeFrom = beforeFromConvert(sSet);
+            sb.append(sFinalBeforeFrom);//由子类来处理
         }
 
         sb.append(mc.group());//sbHead添加FROM字符
@@ -248,7 +251,8 @@ public abstract class AbstractSqlParser {
         if(!hasKey(sFrom)){
             //FROM段没有参数时，直接拼接
             sb.append(sFrom);
-            sb.append(whereConvert(sWhere));
+            String sFinalWhere = whereConvert(sWhere);
+            sb.append(sFinalWhere);
 
             return sb.toString();
         }
@@ -260,10 +264,10 @@ public abstract class AbstractSqlParser {
         String lastJoin = "";//最后一次JOIN语句的字符，这个在while循环外处理最后一段字符时用到
         while (mc2.find()) {
             String oneJoin = sFrom.substring(iStart2,mc2.start());//第一条JOIN语句
-            lastJoin = mc2.group();
             if(iCount > 0){
                 sb.append(lastJoin);
             }
+            lastJoin = mc2.group();
             iCount++;
             if(!hasKey(oneJoin)){
                 //没有参数，直接拼接
@@ -273,7 +277,8 @@ public abstract class AbstractSqlParser {
                 continue;//继续下一段处理
             }
             //AND和OR的条件转换
-            sb.append(andOrConditionConvert(oneJoin));
+            String sAndOr = andOrConditionConvert(oneJoin);
+            sb.append(sAndOr);
             iStart2 = mc2.end();
 
         }
@@ -289,6 +294,11 @@ public abstract class AbstractSqlParser {
         return sb.toString();
     }
 
+    /**
+     * where语句的转换
+     * @param sSql
+     * @return
+     */
     private String whereConvert(String sSql) {
         StringBuilder sb = new StringBuilder();
         //二、 如果语句中没有FROM语句，那会直接进入
@@ -356,11 +366,13 @@ public abstract class AbstractSqlParser {
                 }
             }
             if(needGroupBySplit){
-                sb.append(andOrConditionConvert(sSql.substring(0,mcOrder.start())));
+                String sAndOr = andOrConditionConvert(sSql.substring(0,mcOrder.start()));
+                sb.append(sAndOr);
                 needGroupBySplit = false;
             }
             if(needHavingSplit){
-                sb.append(andOrConditionConvert(sSql.substring(0,mcOrder.start())));
+                String sAndOr = andOrConditionConvert(sSql.substring(0,mcOrder.start()));
+                sb.append(sAndOr);
                 needHavingSplit = false;
             }
             sb.append(mcOrder.group());
@@ -377,15 +389,11 @@ public abstract class AbstractSqlParser {
                     sb.append(sWhereString + sConvertWHere);
                 }
             }
-            if(needGroupBySplit){
-                sb.append(andOrConditionConvert(sSql.substring(0,mcLimit.start())));
+            if(needGroupBySplit || needHavingSplit || needOrderSplit){
+                String sAndOr = andOrConditionConvert(sSql.substring(0,mcLimit.start()));
+                sb.append(sAndOr);
             }
-            if(needHavingSplit){
-                sb.append(andOrConditionConvert(sSql.substring(0,mcLimit.start())));
-            }
-            if(needOrderSplit){
-                sb.append(andOrConditionConvert(sSql.substring(0,mcLimit.start())));
-            }
+
             sb.append(mcLimit.group());
             sSql = sSql.substring(mcLimit.end());
         }
@@ -405,7 +413,6 @@ public abstract class AbstractSqlParser {
         }
         return sb.toString();
     }
-
 
     /**
      * AND和OR的条件转换处理
@@ -532,7 +539,7 @@ public abstract class AbstractSqlParser {
      * @param sSql 只有一个key的字符（即已经过AND或OR的正则表达式匹配后分拆出来的部分字符）
      * @param sLastAndOr 前一个拼接的AND或OR字符
      */
-    protected String parenthesesConvert(String sSql, String sLastAndOr) {
+    private String parenthesesConvert(String sSql, String sLastAndOr) {
         //1、剔除开头的一个或多个左括号，并且把这些左括号记录到变量中，方便后面拼接
         String sOne = sSql;
         String sStartsParentheses="";

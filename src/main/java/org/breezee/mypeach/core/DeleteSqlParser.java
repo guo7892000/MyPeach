@@ -19,11 +19,20 @@ import java.util.regex.Matcher;
 @Slf4j
 public class DeleteSqlParser extends AbstractSqlParser {
 
+    /**
+     * 构造函数
+     * @param properties
+     */
     public DeleteSqlParser(MyPeachProperties properties) {
         super(properties);
         sqlTypeEnum = SqlTypeEnum.DELETE;
     }
 
+    /**
+     * 头部SQL转换
+     * @param sSql
+     * @return
+     */
     @Override
     public String headSqlConvert(String sSql) {
         StringBuilder sb = new StringBuilder();
@@ -41,6 +50,11 @@ public class DeleteSqlParser extends AbstractSqlParser {
         return sb.toString();
     }
 
+    /**
+     * FROM前段SQL处理
+     * @param sSql
+     * @return
+     */
     @Override
     protected String beforeFromConvert(String sSql) {
         return "";
