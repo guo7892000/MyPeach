@@ -48,7 +48,7 @@ public class ParserResult {
     }
 
     public static ParserResult success(String sSql,Map<String, SqlKeyValueEntity> queryMap){
-        return ParserResult.success("SQL转换成功，有效条件请见map集合！",sSql,queryMap);
+        return success("SQL转换成功，有效条件请见mapQuery集合！",sSql,queryMap);
     }
 
     public static ParserResult fail(String msg,Map<String, String> errMap){
@@ -60,10 +60,6 @@ public class ParserResult {
     }
 
     public static ParserResult fail(Map<String, String> errMap){
-        ParserResult result = new ParserResult();
-        result.setCode("1");
-        result.setMessage("SQL转换失败，详细请见map集合！");
-        result.setMapError(errMap);
-        return result;
+        return fail("SQL转换失败，详细请见mapError集合！",errMap);
     }
 }

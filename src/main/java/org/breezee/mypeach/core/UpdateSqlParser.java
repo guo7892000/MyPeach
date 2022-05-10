@@ -21,11 +21,20 @@ import java.util.regex.Matcher;
  * @date: 2022/4/12 16:45
  */
 public class UpdateSqlParser extends AbstractSqlParser {
+    /**
+     * 构造函数
+     * @param properties
+     */
     public UpdateSqlParser(MyPeachProperties properties) {
         super(properties);
         sqlTypeEnum = SqlTypeEnum.UPDATE;
     }
 
+    /**
+     * 头部SQL转换
+     * @param sSql
+     * @return
+     */
     @Override
     public String headSqlConvert(String sSql) {
         StringBuilder sb = new StringBuilder();
@@ -43,6 +52,11 @@ public class UpdateSqlParser extends AbstractSqlParser {
         return sb.toString();
     }
 
+    /**
+     * FROM前段SQL处理
+     * @param sSql
+     * @return
+     */
     protected String beforeFromConvert(String sSql){
         StringBuilder sb = new StringBuilder();
         String[] sSetArray = sSql.split(",");

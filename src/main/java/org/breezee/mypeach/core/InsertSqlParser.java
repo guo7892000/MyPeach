@@ -21,12 +21,20 @@ import java.util.regex.Matcher;
  * @date: 2022/4/12 16:45
  */
 public class InsertSqlParser extends AbstractSqlParser {
-
+    /**
+     * 构造函数
+     * @param properties
+     */
     public InsertSqlParser(MyPeachProperties properties) {
         super(properties);
         sqlTypeEnum = SqlTypeEnum.INSERT_VALUES;
     }
 
+    /**
+     * 头部SQL转换
+     * @param sSql
+     * @return
+     */
     @Override
     public String headSqlConvert(String sSql){
         StringBuilder sbHead = new StringBuilder();
@@ -51,6 +59,11 @@ public class InsertSqlParser extends AbstractSqlParser {
         return sbHead.toString();
     }
 
+    /**
+     * FROM前段SQL处理
+     * @param sSql
+     * @return
+     */
     @Override
     protected String beforeFromConvert(String sSql) {
         StringBuilder sbHead = new StringBuilder();
@@ -68,13 +81,19 @@ public class InsertSqlParser extends AbstractSqlParser {
         return sbHead.toString();
     }
 
+    /**
+     * INSERT INTO及VALUES处理
+     * @param sSql
+     * @param sb
+     * @return
+     */
     private String insertValueConvert(String sSql,StringBuilder sb){
         StringBuilder sbHead = new StringBuilder();
         StringBuilder sbTail = new StringBuilder();
-        //1、抽取出INSERT INTO TABLE_NAME(部分
+        //1、抽取出INSERT INTO TABLE_NAME部分
         Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.insertIntoPattern);
         if (mc.find()){
-            sbHead.append(mc.group());//不变的INSERT INTO TABLE_NAME(部分先加入
+            sbHead.append(mc.group());//加入INSERT INTO TABLE_NAME
             sSql = sSql.substring(mc.end()).trim();
         }
 
@@ -90,8 +109,8 @@ public class InsertSqlParser extends AbstractSqlParser {
             sPara = ToolHelper.removeBeginEndparentheses(mapsParentheses.get(sParaKey));
             sPara = generateParenthesesKey(sPara);//针对有括号的部分先替换为##序号##
 
-            sbHead.append("(");//不变的INSERT INTO TABLE_NAME(部分先加入
-            sbTail.append(mc.group()+ "(");//不变的)VALUES(部分先加入
+            sbHead.append("(");//加入(
+            sbTail.append(mc.group()+ "(");//加入VALUES(
 
             //3、 insert into ... values形式
             String[] colArray = sInsert.split(",");

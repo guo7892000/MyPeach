@@ -4,7 +4,7 @@ INSERT INTO [dbo].[BAS_PROVINCE] --test
     ,[SORT_ID]
  ,[TFLAG],CDATE
  )
- VALUES(
+ VALUES (
  '#PROVINCE_ID#' /*22*/
     ,'#PROVINCE_CODE#' --test
  ,#PROVINCE_NAME#',#SORT_ID#

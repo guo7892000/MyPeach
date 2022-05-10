@@ -20,12 +20,20 @@ import java.util.regex.Matcher;
  */
 @Slf4j
 public class SelectSqlParser extends AbstractSqlParser {
-
+    /**
+     * 构造函数
+     * @param properties
+     */
     public SelectSqlParser(MyPeachProperties properties) {
         super(properties);
         sqlTypeEnum = SqlTypeEnum.SELECT;
     }
 
+    /**
+     * 头部SQL转换
+     * @param sSql
+     * @return
+     */
     @Override
     protected String headSqlConvert(String sSql) {
         StringBuilder sbHead = new StringBuilder();
@@ -52,8 +60,9 @@ public class SelectSqlParser extends AbstractSqlParser {
     }
 
     /**
-     * 针对Oracle中以WITH开头的特殊查询的转换
+     * 以WITH开头的特殊查询的转换
      * @param sSql
+     * @param sbHead
      * @return
      */
     private String withSelectConvert(String sSql, StringBuilder sbHead) {
@@ -73,6 +82,11 @@ public class SelectSqlParser extends AbstractSqlParser {
         return sSql;
     }
 
+    /**
+     * FROM前段SQL处理
+     * @param sSql
+     * @return
+     */
     @Override
     protected String beforeFromConvert(String sSql) {
         return queryBeforeFromConvert(sSql);
