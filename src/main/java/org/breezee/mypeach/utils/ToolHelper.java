@@ -94,7 +94,7 @@ public class ToolHelper {
      * @param sSql
      * @return
      */
-    public static String removeBeginEndparentheses(String sSql){
+    public static String removeBeginEndParentheses(String sSql){
         sSql = sSql.trim();
         sSql = sSql.startsWith("(")?sSql.substring(1):sSql;
         sSql = sSql.endsWith(")")?sSql.substring(0,sSql.length()-1):sSql;

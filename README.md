@@ -92,7 +92,7 @@ mypeach.param-suffix=
         dicQuery.put("#PROVINCE_CODE#","BJ");
         dicQuery.put("#PROVINCE_NAME#","北京");
         dicQuery.put("#DATE#","2022-02-10");
-        dicQuery.put("NAME",1);
+        //dicQuery.put("NAME",1);
         dicQuery.put("#REMARK#","测试");
         //dicQuery.put("BF","back");
         List<Integer> list = new ArrayList<Integer>();

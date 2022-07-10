@@ -44,4 +44,14 @@ public class MyPeachProperties {
      * TargetSqlEnum.directRun：转换为可以直接运行的SQL，SQL中的键已被替换为具体值。注：此方式可能存在SQL注入风险！！
      */
     private TargetSqlParamTypeEnum targetSqlParamTypeEnum = TargetSqlParamTypeEnum.Param;
+
+    /**
+     * 是否在标准输出中显示调试的SQL：默认否
+     */
+    private boolean showDebugSql = false;
+    /*
+     *SQL输出日志路径，默认为空，即不输出。如果我们设置了目录，那么会按天生成类似： sql.20220709.txt文件
+     * 注：相对路径时，开头不要加/，要以目录名开头。
+     */
+    private String logSqlPath = "";
 }

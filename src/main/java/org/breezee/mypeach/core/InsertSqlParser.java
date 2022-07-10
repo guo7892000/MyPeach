@@ -1,13 +1,10 @@
 package org.breezee.mypeach.core;
 
-import lombok.extern.slf4j.Slf4j;
 import org.breezee.mypeach.autoconfigure.MyPeachProperties;
 import org.breezee.mypeach.config.StaticConstants;
 import org.breezee.mypeach.enums.SqlTypeEnum;
 import org.breezee.mypeach.utils.ToolHelper;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.regex.Matcher;
 
 /**
@@ -105,8 +102,8 @@ public class InsertSqlParser extends AbstractSqlParser {
             String sInsertKey = sSql.substring(0,mc.start()).trim();
             String sParaKey = sSql.substring(mc.end()).trim();
 
-            sInsert = ToolHelper.removeBeginEndparentheses(mapsParentheses.get(sInsertKey));
-            sPara = ToolHelper.removeBeginEndparentheses(mapsParentheses.get(sParaKey));
+            sInsert = ToolHelper.removeBeginEndParentheses(mapsParentheses.get(sInsertKey));
+            sPara = ToolHelper.removeBeginEndParentheses(mapsParentheses.get(sParaKey));
             sPara = generateParenthesesKey(sPara);//针对有括号的部分先替换为##序号##
 
             sbHead.append("(");//加入(

@@ -27,7 +27,7 @@ public class Select2Test {
     SqlParsers sqlParsers;
 
     @Test
-    void selecet2() throws IOException {
+    void selecet1() throws IOException {
         String sSql = new String(Files.readAllBytes(Paths.get(testFilePrefix + "01_Select.txt")));
         Map<String, Object> dicQuery = new HashMap<>();
         dicQuery.put("PROVINCE_ID","张三");
@@ -50,6 +50,18 @@ public class Select2Test {
         //sqlParsers.properties.setKeyStyle(SqlKeyStyleEnum.POUND_SIGN_BRACKETS);//设置为#{}模式
         ParserResult result = sqlParsers.parse(SqlTypeEnum.SELECT,sSql, dicQuery);
 
+        System.out.println(result.getCode().equals("0")?result.getSql():result.getMessage());//0转换成功，返回SQL；1转换失败，返回错误信息
+    }
+
+    @Test
+    void Select2()
+    {
+        Map<String, Object> dicQuery = new HashMap<>();
+        String sSql = "SELECT * FROM BAS_CITY T WHERE T.CITY_ID = #CITY_ID#";
+        dicQuery.put("PROVINCE_ID", "张三");
+        dicQuery.put("PROVINCE_CODE", "BJ");
+        dicQuery.put("PROVINCE_NAME", "北京");
+        ParserResult result = sqlParsers.parse(SqlTypeEnum.SELECT, sSql, dicQuery);
         System.out.println(result.getCode().equals("0")?result.getSql():result.getMessage());//0转换成功，返回SQL；1转换失败，返回错误信息
     }
 }

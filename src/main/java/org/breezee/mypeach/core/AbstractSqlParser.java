@@ -9,6 +9,10 @@ import org.breezee.mypeach.enums.SqlTypeEnum;
 import org.breezee.mypeach.enums.TargetSqlParamTypeEnum;
 import org.breezee.mypeach.utils.ToolHelper;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
@@ -16,7 +20,7 @@ import java.util.regex.Pattern;
 
 /**
  * @objectName: SQL分析抽象类
- * @description: 作为SELECT、INSERT、UPDATE、DELETE分析器的父类，包含SQL的前置处理，如SQL大定、去掉注释、提取键等。
+ * @description: 作为SELECT、INSERT、UPDATE、DELETE分析器的父类，包含SQL的前置处理，如SQL大写、去掉注释、提取键等。
  * @author: guohui.huang
  * @email: guo7892000@126.com
  * @wechat: BreezeeHui
@@ -118,8 +122,11 @@ public abstract class AbstractSqlParser {
             }
         }
 
+        ParserResult result;
         if(mapSqlKey.size()==0){
-            return ParserResult.fail("SQL中没有发现键，当前键配置样式为："+keyPrefix +"key"+ keySuffix+"，请修改配置或SQL。已退出！",mapError);
+            result = ParserResult.success(sSql,mapSqlKey);
+            result.setMessage("SQL中没有发现键(键配置样式为："+keyPrefix +"key"+ keySuffix+")，已直接返回原SQL！");
+            return result;
         }
 
         if(mapError.size()>0){
@@ -139,7 +146,7 @@ public abstract class AbstractSqlParser {
         if(mapError.size()>0){
             return ParserResult.fail("部分非空键没有传入值或其他错误，关联信息："+String.join(",",mapError.keySet())+"，已退出！",mapError);
         }
-        ParserResult result;
+
         //6、返回最终结果
         if(sFinalSql.isEmpty()){
             result = ParserResult.fail("转换失败，原因不明。",mapError);
@@ -147,6 +154,38 @@ public abstract class AbstractSqlParser {
             result = ParserResult.success(sFinalSql, mapSqlKeyValid);
             result.setSql(sFinalSql);
             result.setMapQuery(mapSqlKeyValid);
+            if(myPeachProp.isShowDebugSql()){
+                System.out.println(sFinalSql);
+            }
+            String sPath = myPeachProp.getLogSqlPath();
+            if(!sPath.isEmpty()){
+                Calendar calendar= Calendar.getInstance();
+                SimpleDateFormat dateFormat= new SimpleDateFormat("yyyy-MM-dd");
+                String sLogFileName = "/sql."+dateFormat.format(calendar.getTime())+".txt";
+                if (!sPath.startsWith("/") && sPath.indexOf(":") == 0) {
+                    sPath = System.getProperty("user.dir")+"/" + sPath;
+                }
+                Path path = Paths.get(sPath);
+                if(!Files.exists(path)){
+                    try {
+                        Files.createDirectories(path);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                try {
+                    path = Paths.get(sPath + "/" + sLogFileName);
+                    StringBuilder sb = new StringBuilder();
+                    sb.append(sFinalSql+System.lineSeparator());
+                    dateFormat= new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                    sb.append("*******************【" + dateFormat.format(calendar.getTime()) + "】**************************");
+                    sb.append(System.lineSeparator());
+                    sb.append(System.lineSeparator());
+                    Files.write(path, sb.toString().getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND, StandardOpenOption.CREATE);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
         return result;
     }
@@ -242,7 +281,7 @@ public abstract class AbstractSqlParser {
         Matcher mcWhere = ToolHelper.getMatcher(sFromWhere, StaticConstants.wherePattern);
         //因为只会有一个FROM，所以这里不用WHILE，而使用if
         if (!mcWhere.find()) {
-            return sb.toString();//没有WHERE段，则直接返回
+            return sb.toString() + sFromWhere;//没有WHERE段，则直接返回
         }
         //3、FROM段的处理
         String sFrom = sFromWhere.substring(0,mcWhere.start());//

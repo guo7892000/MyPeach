@@ -79,7 +79,7 @@ public class SelectSqlParser extends AbstractSqlParser {
             sSql = sSql.substring(iStart).trim();//去掉之前处理过的部分
             sSql = queryHeadSqlConvert(sSql,true);//通用的以Select开头的处理
         }
-        return sSql;
+        return sSql;//还需要处理的SQL
     }
 
     /**

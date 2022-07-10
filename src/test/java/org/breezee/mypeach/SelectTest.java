@@ -51,9 +51,11 @@ public class SelectTest {
         dicQuery.put("MDLIST",list);//传入一个数组
         //SelectSqlParser sqlAnalyzer = new SelectSqlParser(new MyPeachProperties());
         //sqlParsers.properties.setTargetSqlParamTypeEnum(TargetSqlParamTypeEnum.DIRECT_RUN);//改变SQL生成方式
+        sqlParsers.properties.setShowDebugSql(true);
+        sqlParsers.properties.setLogSqlPath("E:\\mypeach");
         ParserResult result = sqlParsers.parse(SqlTypeEnum.SELECT,sSql, dicQuery);
-        System.out.println(result.getMessage());
-        System.out.println(result.getSql());
+        //System.out.println(result.getMessage());
+        //System.out.println(result.getSql());
     }
 
     @Test

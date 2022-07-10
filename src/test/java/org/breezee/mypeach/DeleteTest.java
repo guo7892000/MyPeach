@@ -37,6 +37,7 @@ public class DeleteTest {
         dicQuery.put("#PROVINCE_NAME#","北京");
         dicQuery.put("#REMARK#","2'--2");
         //dicQuery.put("BF","BFFFF");
+        dicQuery.put("TFLG","1");
 
         //sqlParsers.properties.setTargetSqlParamTypeEnum(TargetSqlParamTypeEnum.DIRECT_RUN);
         //sqlParsers.properties.setStopDeleteNoConditon(false);
