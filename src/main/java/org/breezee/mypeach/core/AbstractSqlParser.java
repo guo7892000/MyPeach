@@ -44,10 +44,12 @@ public abstract class AbstractSqlParser {
 
     protected Map<String, SqlKeyValueEntity> mapSqlKey;//SQL中所有键
     protected Map<String, SqlKeyValueEntity> mapSqlKeyValid;//SQL中有传值的所有键
+    protected ArrayList positionParamConditonList;//位置参数用到的参数值
 
     Map<String,String> mapsParentheses;//优先处理的括号集合
     public Map<String, String> mapError;//错误信息Map
-
+    Map<String, Object> mapObject;
+    Map<String, String> mapString;
     protected SqlTypeEnum sqlTypeEnum;
 
     /***
@@ -79,6 +81,9 @@ public abstract class AbstractSqlParser {
         mapSqlKey = new HashMap<>();
         mapSqlKeyValid = new HashMap<>();
         mapError = new ConcurrentHashMap<>();//并发容器-错误信息
+        mapObject = new HashMap<>();
+        mapString = new HashMap<>();
+        positionParamConditonList = new ArrayList();
     }
 
     /**
@@ -110,21 +115,28 @@ public abstract class AbstractSqlParser {
         mc = ToolHelper.getMatcher(sSql, keyPattern);
         while (mc.find()) {
             String sParamName = ToolHelper.getKeyName(mc.group(), myPeachProp);
+            SqlKeyValueEntity param = SqlKeyValueEntity.build(mc.group(), dicNew, myPeachProp);
+
             if(!mapSqlKey.containsKey(sParamName)){
-                SqlKeyValueEntity param = SqlKeyValueEntity.build(mc.group(), dicNew, myPeachProp);
                 mapSqlKey.put(sParamName,param);
                 if(param.isHasValue()){
                     mapSqlKeyValid.put(sParamName,param);//有传值的键
+                    mapObject.put(sParamName,param.getKeyValue());
+                    mapString.put(sParamName,String.valueOf(param.getKeyValue()));
                 }
                 if(ToolHelper.IsNotNull(param.getErrorMessage())){
                     mapError.put(sParamName,param.getErrorMessage());//错误列表
                 }
             }
+            //位置参数的条件值数组
+            if(param.isHasValue()) {
+                positionParamConditonList.add(param.getKeyValue());
+            }
         }
 
         ParserResult result;
         if(mapSqlKey.size()==0){
-            result = ParserResult.success(sSql,mapSqlKey);
+            result = ParserResult.success(sSql,mapSqlKey,mapObject,mapString, positionParamConditonList);
             result.setMessage("SQL中没有发现键(键配置样式为："+keyPrefix +"key"+ keySuffix+")，已直接返回原SQL！");
             return result;
         }
@@ -149,44 +161,63 @@ public abstract class AbstractSqlParser {
 
         //6、返回最终结果
         if(sFinalSql.isEmpty()){
-            result = ParserResult.fail("转换失败，原因不明。",mapError);
-        } else {
-            result = ParserResult.success(sFinalSql, mapSqlKeyValid);
-            result.setSql(sFinalSql);
-            result.setMapQuery(mapSqlKeyValid);
-            if(myPeachProp.isShowDebugSql()){
-                System.out.println(sFinalSql);
+            return ParserResult.fail("转换失败，原因不明。",mapError);
+        }
+        //转换成功
+        result = ParserResult.success(sFinalSql, mapSqlKeyValid,mapObject,mapString, positionParamConditonList);
+        result.setSql(sFinalSql);
+        result.setMapQuery(mapSqlKeyValid);
+
+        if(myPeachProp.isShowDebugSql()){
+            System.out.println(sFinalSql);
+        }
+        String sPath = myPeachProp.getLogSqlPath();
+        if(!sPath.isEmpty()){
+            Calendar calendar= Calendar.getInstance();
+            SimpleDateFormat dateFormat= new SimpleDateFormat("yyyy-MM-dd");
+            String sLogFileName = "/sql."+dateFormat.format(calendar.getTime())+".txt";
+            if (!sPath.startsWith("/") && sPath.indexOf(":") == 0) {
+                sPath = System.getProperty("user.dir")+"/" + sPath;
             }
-            String sPath = myPeachProp.getLogSqlPath();
-            if(!sPath.isEmpty()){
-                Calendar calendar= Calendar.getInstance();
-                SimpleDateFormat dateFormat= new SimpleDateFormat("yyyy-MM-dd");
-                String sLogFileName = "/sql."+dateFormat.format(calendar.getTime())+".txt";
-                if (!sPath.startsWith("/") && sPath.indexOf(":") == 0) {
-                    sPath = System.getProperty("user.dir")+"/" + sPath;
-                }
-                Path path = Paths.get(sPath);
-                if(!Files.exists(path)){
-                    try {
-                        Files.createDirectories(path);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
+            Path path = Paths.get(sPath);
+            if(!Files.exists(path)){
                 try {
-                    path = Paths.get(sPath + "/" + sLogFileName);
-                    StringBuilder sb = new StringBuilder();
-                    sb.append(sFinalSql+System.lineSeparator());
-                    dateFormat= new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                    sb.append("*******************【" + dateFormat.format(calendar.getTime()) + "】**************************");
-                    sb.append(System.lineSeparator());
-                    sb.append(System.lineSeparator());
-                    Files.write(path, sb.toString().getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND, StandardOpenOption.CREATE);
+                    Files.createDirectories(path);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
+            try {
+                path = Paths.get(sPath + "/" + sLogFileName);
+                StringBuilder sb = new StringBuilder();
+                sb.append(sFinalSql+System.lineSeparator());
+                dateFormat= new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                sb.append("*******************【" + dateFormat.format(calendar.getTime()) + "】**************************");
+                sb.append(System.lineSeparator());
+                sb.append(System.lineSeparator());
+                Files.write(path, sb.toString().getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND, StandardOpenOption.CREATE);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
+        return result;
+    }
+
+    /**
+     * 转换重载方法
+     * @param sSql
+     * @param dic
+     * @param targetSqlParamTypeEnum
+     * @return
+     */
+    public ParserResult parse(String sSql, Map<String, Object> dic,TargetSqlParamTypeEnum targetSqlParamTypeEnum){
+        TargetSqlParamTypeEnum oldParamTypeEnum = myPeachProp.getTargetSqlParamTypeEnum();
+        if(targetSqlParamTypeEnum == oldParamTypeEnum){
+            return parse(sSql,dic);
+        }
+        myPeachProp.setTargetSqlParamTypeEnum(targetSqlParamTypeEnum);//设置为新的目标SQL类型
+        ParserResult result = parse(sSql,dic);
+        myPeachProp.setTargetSqlParamTypeEnum(oldParamTypeEnum);//还原为旧的目标SQL类型
         return result;
     }
 
@@ -693,7 +724,10 @@ public abstract class AbstractSqlParser {
                 return sSql.replace(mc.group(), String.valueOf(entity.getReplaceKeyWithValue()));
             }
             //3、返回参数化的SQL语句
-            return sSql.replace(mc.group(), myPeachProp.getParamPrefix()+sKey+ myPeachProp.getParamSuffix());
+            if(myPeachProp.getTargetSqlParamTypeEnum() == TargetSqlParamTypeEnum.NameParam){
+                return sSql.replace(mc.group(), myPeachProp.getParamPrefix()+sKey+ myPeachProp.getParamSuffix());
+            }
+            return sSql.replace(mc.group(), "?");
         }
         return sSql;//4、没有键时，直接返回原语句
     }

@@ -1,4 +1,13 @@
 # 变更历史
+## 版本：1.1.3  发布日期：2022-07-24
+* 增加区分命名参数（默认）和位置参数的SQL转换配置。
+* 给parse方法增加了一个指定TargetSqlParamTypeEnum的重载方法。以下为两种方式的使用示例： 
+* String sSql = "SELECT * FROM BAS_PROVINCE T WHERE T.PROVINCE_ID = '#PROVINCE_ID#' AND T.PROVINCE_CODE = '#PROVINCE_CODE#'";
+* ParserResult parserResult = sqlParsers.parse(SqlTypeEnum.SELECT, sSql, dicQuery);//默认使用命名参数方式
+* List<Map<String, Object>> maps = namedParameterJdbcTemplate.queryForList(parserResult.getSql(),parserResult.getMapObject());
+* //指定使用位置参数方式 
+* ParserResult parserResultPos = sqlParsers.parse(SqlTypeEnum.SELECT, sSql, dicQuery, TargetSqlParamTypeEnum.PostionParam);
+* maps = jdbcTemplate.queryForList(parserResultPos.getSql(), parserResultPos.getPositionCondition().toArray());
 ## 版本：1.1.2  发布日期：2022-07-09
 * 增加调试SQL显示、SQL日志输出路径配置功能。
 * 对于没有键配置的SQL，直接返回原SQL。

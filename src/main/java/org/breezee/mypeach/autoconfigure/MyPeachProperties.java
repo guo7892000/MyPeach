@@ -40,10 +40,10 @@ public class MyPeachProperties {
     /**
      * 名称：生成的SQL类型
      * 描述：
-     * TargetSqlEnum.param：参数化的SQL，默认
+     * TargetSqlEnum.NameParam：参数化的SQL，默认
      * TargetSqlEnum.directRun：转换为可以直接运行的SQL，SQL中的键已被替换为具体值。注：此方式可能存在SQL注入风险！！
      */
-    private TargetSqlParamTypeEnum targetSqlParamTypeEnum = TargetSqlParamTypeEnum.Param;
+    private TargetSqlParamTypeEnum targetSqlParamTypeEnum = TargetSqlParamTypeEnum.NameParam;
 
     /**
      * 是否在标准输出中显示调试的SQL：默认否

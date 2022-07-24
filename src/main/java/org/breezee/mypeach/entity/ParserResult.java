@@ -2,6 +2,7 @@ package org.breezee.mypeach.entity;
 
 import lombok.Data;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,6 +32,11 @@ public class ParserResult {
     private String sql;
 
     /**
+     * 参数位置化的查询条件值
+     */
+    private ArrayList positionCondition;
+
+    /**
      * 错误信息集合
      */
     Map<String, String> mapError = new HashMap<>();
@@ -38,17 +44,23 @@ public class ParserResult {
      * 有效条件集合
      */
     Map<String, SqlKeyValueEntity> mapQuery = new HashMap<>();
+    Map<String, Object> mapObject = new HashMap<>();
+    Map<String, String> mapString = new HashMap<>();
 
-    public static ParserResult success(String msg,String sSql,Map<String, SqlKeyValueEntity> queryMap){
+    public static ParserResult success(String msg,String sSql,Map<String, SqlKeyValueEntity> queryMap,Map<String, Object> mapObject,Map<String, String> mapString,ArrayList pCondition){
         ParserResult result = new ParserResult();
         result.setCode("0");
+        result.setSql(sSql);
         result.setMessage(msg);
         result.setMapQuery(queryMap);
+        result.setMapObject(mapObject);
+        result.setMapString(mapString);
+        result.setPositionCondition(pCondition);
         return result;
     }
 
-    public static ParserResult success(String sSql,Map<String, SqlKeyValueEntity> queryMap){
-        return success("SQL转换成功，有效条件请见mapQuery集合！",sSql,queryMap);
+    public static ParserResult success(String sSql,Map<String, SqlKeyValueEntity> queryMap,Map<String, Object> mapObject,Map<String, String> mapString,ArrayList pCondition){
+        return success("SQL转换成功，有效条件请见mapQuery集合！",sSql,queryMap,mapObject,mapString,pCondition);
     }
 
     public static ParserResult fail(String msg,Map<String, String> errMap){

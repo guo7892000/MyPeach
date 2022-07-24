@@ -3,6 +3,7 @@ package org.breezee.mypeach;
 import org.breezee.mypeach.core.SqlParsers;
 import org.breezee.mypeach.entity.ParserResult;
 import org.breezee.mypeach.enums.SqlTypeEnum;
+import org.breezee.mypeach.enums.TargetSqlParamTypeEnum;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -103,5 +104,25 @@ public class SelectTest {
         ParserResult result = sqlParsers.parse(SqlTypeEnum.SELECT,sSql, dicQuery);
         System.out.println(result.getMessage());
         System.out.println(result.getSql());
+    }
+
+    @Test
+    void selecetParamType() throws IOException {
+        String sSql = new String(Files.readAllBytes(Paths.get(testFilePrefix + "01_Select.txt")));
+        Map<String, Object> dicQuery = new HashMap<>();
+        //dicQuery.put("PROVINCE_ID","张三");
+        dicQuery.put("#PROVINCE_CODE#","BJ");
+        dicQuery.put("#PROVINCE_NAME#","北京");
+        dicQuery.put("#DATE#","20222-02-10");
+        dicQuery.put("NAME",1);
+        dicQuery.put("SORT_ID",20);
+        dicQuery.put("#REMARK#","测试");
+        dicQuery.put("PAGE_SIZE",8);
+
+        sqlParsers.properties.setShowDebugSql(true);
+        //sqlParsers.properties.setLogSqlPath("E:\\mypeach");
+        ParserResult result = sqlParsers.parse(SqlTypeEnum.SELECT,sSql, dicQuery, TargetSqlParamTypeEnum.PostionParam);
+        //System.out.println(result.getMessage());
+        //System.out.println(result.getSql());
     }
 }

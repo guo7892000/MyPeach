@@ -3,6 +3,7 @@ package org.breezee.mypeach.core;
 import org.breezee.mypeach.autoconfigure.MyPeachProperties;
 import org.breezee.mypeach.entity.ParserResult;
 import org.breezee.mypeach.enums.SqlTypeEnum;
+import org.breezee.mypeach.enums.TargetSqlParamTypeEnum;
 
 import java.util.Map;
 
@@ -30,20 +31,24 @@ public class SqlParsers {
      * @param dic   SQL语句中键的值
      * @return 根据传入的动态条件转换为动态的SQL
      */
-    public ParserResult parse(SqlTypeEnum sqlType, String sSql, Map<String, Object> dic){
+    public ParserResult parse(SqlTypeEnum sqlType, String sSql, Map<String, Object> dic, TargetSqlParamTypeEnum paramTypeEnum){
         switch (sqlType){
             case INSERT_VALUES:
             case INSERT_SELECT:
-                return new InsertSqlParser(properties).parse(sSql,dic);
+                return new InsertSqlParser(properties).parse(sSql,dic,paramTypeEnum);
             case UPDATE:
-                return new UpdateSqlParser(properties).parse(sSql,dic);
+                return new UpdateSqlParser(properties).parse(sSql,dic,paramTypeEnum);
             case DELETE:
-                return new DeleteSqlParser(properties).parse(sSql,dic);
+                return new DeleteSqlParser(properties).parse(sSql,dic,paramTypeEnum);
             case SELECT:
             case SELECT_WITH_AS:
             default:
-                return new SelectSqlParser(properties).parse(sSql,dic);
+                return new SelectSqlParser(properties).parse(sSql,dic,paramTypeEnum);
         }
+    }
+
+    public ParserResult parse(SqlTypeEnum sqlType, String sSql, Map<String, Object> dic){
+        return parse(sqlType,sSql,dic,TargetSqlParamTypeEnum.NameParam);
     }
 
 }
