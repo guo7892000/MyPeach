@@ -120,9 +120,10 @@ public class SelectTest {
         dicQuery.put("PAGE_SIZE",8);
 
         sqlParsers.properties.setShowDebugSql(true);
+        //sqlParsers.properties.setTargetSqlParamTypeEnum(TargetSqlParamTypeEnum.PostionParam);
         //sqlParsers.properties.setLogSqlPath("E:\\mypeach");
         ParserResult result = sqlParsers.parse(SqlTypeEnum.SELECT,sSql, dicQuery, TargetSqlParamTypeEnum.PostionParam);
         //System.out.println(result.getMessage());
-        //System.out.println(result.getSql());
+        System.out.println(result.getSql());
     }
 }
