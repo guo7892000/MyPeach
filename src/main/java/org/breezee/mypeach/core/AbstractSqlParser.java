@@ -50,6 +50,7 @@ public abstract class AbstractSqlParser {
     public Map<String, String> mapError;//错误信息Map
     Map<String, Object> mapObject;
     Map<String, String> mapString;
+    Map<String, String> dynamicString;
     protected SqlTypeEnum sqlTypeEnum;
 
     /***
@@ -83,6 +84,7 @@ public abstract class AbstractSqlParser {
         mapError = new ConcurrentHashMap<>();//并发容器-错误信息
         mapObject = new HashMap<>();
         mapString = new HashMap<>();
+        dynamicString = new HashMap<>();
         positionParamConditonList = new ArrayList();
     }
 
@@ -93,12 +95,29 @@ public abstract class AbstractSqlParser {
      * @return 返回转换结果
      */
     public ParserResult parse(String sSql, Map<String, Object> dic){
-
-        sSql = sSql.trim().toUpperCase();//将SQL转换为大写
+        //去掉前后空字符：注这里不要转换为大写，因为有些条件里有字母值，如转换为大写，则会使条件失效！！
+        sSql = sSql.trim(); //.toUpperCase();//将SQL转换为大写
+        Matcher mc;
+        //0.读取注释中的动态SQL：未完成
+//        String sDynSql = "";
+//        mc = ToolHelper.getMatcher(sSql, StaticConstants.dynamicSqlPattern);//Pattern：explanatory note
+//        Pattern regex;
+//        int i=1;
+//        int iLastBegin=0;
+//        int iLastEnd=0;
+//        while (mc.find()) {
+//            sDynSql = mc.group();
+//            if(i%2==0){
+//                dynamicString.put(sDynSql,sSql.substring(mc.start(),mc.end()));
+//                sSql = sSql.substring(0,iLastBegin)+ sDynSql + sSql.substring(0,mc.end());//读取后面的
+//            }
+//            iLastBegin=mc.start();
+//            iLastEnd = mc.end();
+//            i++;
+//        }
 
         //1、删除所有注释，降低分析难度，提高准确性
-        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.remarkPatter);//Pattern：explanatory note
-        Pattern regex;
+        mc = ToolHelper.getMatcher(sSql, StaticConstants.remarkPatter);//Pattern：explanatory note
         while (mc.find()) {
             sSql = sSql.replace(mc.group(),"");//删除所有注释
         }

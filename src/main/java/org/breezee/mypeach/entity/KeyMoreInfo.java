@@ -1,6 +1,7 @@
 package org.breezee.mypeach.entity;
 
 import lombok.Data;
+import org.breezee.mypeach.config.SqlKeyConfig;
 
 import java.util.*;
 
@@ -40,13 +41,13 @@ public class KeyMoreInfo {
             String sOne = arr[i];
             if(sOne.isEmpty()) continue;
 
-            if("N".equals(sOne)){
+            if(SqlKeyConfig.NOT_NULL.equals(sOne)){
                 moreInfo.setNullable(false);//非空
-            } else if("R".equals(sOne)){
+            } else if(SqlKeyConfig.VALUE_REPLACE.equals(sOne)){
                 moreInfo.setMustValueReplace(true);//必须替换
-            } else if("LS".equals(sOne)){
+            } else if(SqlKeyConfig.STRING_LIST.equals(sOne)){
                 listConvert(objValue, moreInfo,true);
-            } else if("LI".equals(sOne)){
+            } else if(SqlKeyConfig.INTEGE_LIST.equals(sOne)){
                 listConvert(objValue, moreInfo,false);
             }
 

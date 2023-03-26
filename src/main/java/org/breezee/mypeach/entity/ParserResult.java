@@ -27,6 +27,11 @@ public class ParserResult {
     private String message;
 
     /**
+     * 转换前的SQL
+     */
+    private String sourceSql;
+
+    /**
      * 转换后的SQL
      */
     private String sql;

@@ -93,4 +93,8 @@ public class StaticConstants {
     public static final String updateSetPattern = "^UPDATE\\s*\\S*\\s*SET\\s*";//正则式：UPDATE TABLE_NAME SET
     public static final String deletePattern = "^DELETE\\s+FROM\\s+\\S+\\s+"; //正则式:DELETE FROM TABALE_NAME
 
+    /**
+     * 注释中的动态SQL配置
+     */
+    public static final String dynamicSqlPattern = "\\s*/*\\**:*DYN:\\w+:\\w+:*\\**/*"; //匹配的正则式如:/**dyn:id:1:**/、/**:dyn:id:1**/、/*dyn:id:2:、:dyn:id:2*/
 }
