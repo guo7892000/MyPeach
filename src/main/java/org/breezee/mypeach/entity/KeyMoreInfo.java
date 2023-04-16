@@ -70,6 +70,7 @@ public class KeyMoreInfo {
             //String数组或集合
             if(objValue instanceof String[]){
                 moreInfo.setInString("'" + String.join("','",(String[]) objValue) + "'");
+                moreInfo.setMustValueReplace(true);
                 return;
             }
             if(objValue instanceof Collection){
@@ -83,11 +84,13 @@ public class KeyMoreInfo {
                 }
                 sList += "'";
                 moreInfo.setInString(sList);
+                moreInfo.setMustValueReplace(true);
             }
         } else {
             //Integer数组或集合
             if(objValue instanceof Integer[]){
                 moreInfo.setInString(String.join(",",(String[]) objValue));
+                moreInfo.setMustValueReplace(true);
                 return;
             }
             if(objValue instanceof Collection){
@@ -100,6 +103,7 @@ public class KeyMoreInfo {
                     sPre = ",";
                 }
                 moreInfo.setInString(sList);
+                moreInfo.setMustValueReplace(true);
             }
         }
 

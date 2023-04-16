@@ -50,6 +50,7 @@ public abstract class AbstractSqlParser {
     public Map<String, String> mapError;//错误信息Map
     Map<String, Object> mapObject;
     Map<String, String> mapString;
+    Map<String, String> mapReplaceOrInCondition; //被替换的值或IN清单，这些将在返回的条件中剔除，因为他们不需要被参数化
     Map<String, String> dynamicString;
     protected SqlTypeEnum sqlTypeEnum;
 
@@ -84,6 +85,7 @@ public abstract class AbstractSqlParser {
         mapError = new ConcurrentHashMap<>();//并发容器-错误信息
         mapObject = new HashMap<>();
         mapString = new HashMap<>();
+        mapReplaceOrInCondition = new HashMap<>();
         dynamicString = new HashMap<>();
         positionParamConditonList = new ArrayList();
     }
@@ -142,13 +144,17 @@ public abstract class AbstractSqlParser {
                     mapSqlKeyValid.put(sParamName,param);//有传值的键
                     mapObject.put(sParamName,param.getKeyValue());
                     mapString.put(sParamName,String.valueOf(param.getKeyValue()));
+                    if (param.getKeyMoreInfo().isMustValueReplace())
+                    {
+                        mapReplaceOrInCondition.put(sParamName, sParamName); //要被替换或IN清单的条件键
+                    }
                 }
                 if(ToolHelper.IsNotNull(param.getErrorMessage())){
                     mapError.put(sParamName,param.getErrorMessage());//错误列表
                 }
             }
             //位置参数的条件值数组
-            if(param.isHasValue()) {
+            if(param.isHasValue() && !param.getKeyMoreInfo().isMustValueReplace()) {
                 positionParamConditonList.add(param.getKeyValue());
             }
         }
@@ -181,6 +187,14 @@ public abstract class AbstractSqlParser {
         //6、返回最终结果
         if(sFinalSql.isEmpty()){
             return ParserResult.fail("转换失败，原因不明。",mapError);
+        }
+
+        //7、针对值替换以及IN清单，要从条件中移除，防止参数化报错
+        for (String sKey:mapReplaceOrInCondition.keySet())
+        {
+            mapSqlKeyValid.remove(sKey);
+            mapObject.remove(sKey);
+            mapString.remove(sKey);
         }
         //转换成功
         result = ParserResult.success(sFinalSql, mapSqlKeyValid,mapObject,mapString, positionParamConditonList);
