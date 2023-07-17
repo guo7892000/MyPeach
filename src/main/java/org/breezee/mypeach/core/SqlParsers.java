@@ -1,11 +1,14 @@
 package org.breezee.mypeach.core;
 
 import org.breezee.mypeach.autoconfigure.MyPeachProperties;
+import org.breezee.mypeach.config.StaticConstants;
 import org.breezee.mypeach.entity.ParserResult;
 import org.breezee.mypeach.enums.SqlTypeEnum;
 import org.breezee.mypeach.enums.TargetSqlParamTypeEnum;
+import org.breezee.mypeach.utils.ToolHelper;
 
 import java.util.Map;
+import java.util.regex.Matcher;
 
 /**
  * @objectName:
@@ -45,6 +48,31 @@ public class SqlParsers {
             default:
                 return new SelectSqlParser(properties).parse(sSql,dic,paramTypeEnum);
         }
+    }
+
+    /***
+     * @param sSql  需要自动化转换的SQL
+     * @param dic   SQL语句中键的值
+     * @return 根据传入的动态条件转换为动态的SQL
+     */
+    public ParserResult parse(String sSql, Map<String, Object> dic, TargetSqlParamTypeEnum paramTypeEnum)
+    {
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.insertIntoPattern);
+        if (mc.find())
+        {
+            return new InsertSqlParser(properties).parse(sSql, dic, paramTypeEnum);
+        }
+        mc = ToolHelper.getMatcher(sSql, StaticConstants.updateSetPattern);//先截取UPDATE SET部分
+        if (mc.find())
+        {
+            return new UpdateSqlParser(properties).parse(sSql, dic, paramTypeEnum);
+        }
+        mc = ToolHelper.getMatcher(sSql, StaticConstants.deletePattern);//抽取出INSERT INTO TABLE_NAME(部分
+        if (mc.find())
+        {
+            return new DeleteSqlParser(properties).parse(sSql, dic, paramTypeEnum);
+        }
+        return new SelectSqlParser(properties).parse(sSql, dic, paramTypeEnum);
     }
 
     public ParserResult parse(SqlTypeEnum sqlType, String sSql, Map<String, Object> dic){
