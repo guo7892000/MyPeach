@@ -90,6 +90,37 @@ public abstract class AbstractSqlParser {
         positionParamConditonList = new ArrayList();
     }
 
+    /// <summary>
+    /// 预获取SQL参数（方便给参数赋值用于测试）
+    /// </summary>
+    /// <param name="sSql"></param>
+    /// <returns></returns>
+    public Map<String, SqlKeyValueEntity> PreGetParam(String sSql)
+    {
+        Map<String, SqlKeyValueEntity> dicReturn = new HashMap<String, SqlKeyValueEntity>();
+        //去掉前后空字符：注这里不要转换为大写，因为有些条件里有字母值，如转换为大写，则会使条件失效！！
+        String sSqlNew = sSql.trim(); //.toUpperCase();//将SQL转换为大写
+
+        //1、删除所有注释，降低分析难度，提高准确性
+        Matcher mc = ToolHelper.getMatcher(sSqlNew, StaticConstants.remarkPatter);//Pattern：explanatory note
+        //Pattern regex;
+        while (mc.find())
+        {
+            sSqlNew = sSqlNew.replace(mc.group(), "");//删除所有注释
+        }
+        mc = ToolHelper.getMatcher(sSqlNew, keyPattern);
+        while (mc.find())
+        {
+            String sParamName = ToolHelper.getKeyName(mc.group(), myPeachProp);
+            SqlKeyValueEntity param = SqlKeyValueEntity.build(mc.group(), new HashMap<String, Object>(), myPeachProp);
+            if (dicReturn.containsKey(sParamName))
+            {
+                dicReturn.put(sParamName,param);
+            }
+        }
+        return dicReturn;
+    }
+
     /**
      * 转换SQL（主入口方法）
      * @param sSql 要转换的SQL
