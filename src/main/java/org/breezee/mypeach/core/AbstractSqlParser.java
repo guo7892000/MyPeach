@@ -113,7 +113,7 @@ public abstract class AbstractSqlParser {
         {
             String sParamName = ToolHelper.getKeyName(mc.group(), myPeachProp);
             SqlKeyValueEntity param = SqlKeyValueEntity.build(mc.group(), new HashMap<String, Object>(), myPeachProp);
-            if (dicReturn.containsKey(sParamName))
+            if (!dicReturn.containsKey(sParamName))
             {
                 dicReturn.put(sParamName,param);
             }

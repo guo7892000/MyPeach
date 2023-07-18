@@ -3,6 +3,7 @@ package org.breezee.mypeach.core;
 import org.breezee.mypeach.autoconfigure.MyPeachProperties;
 import org.breezee.mypeach.config.StaticConstants;
 import org.breezee.mypeach.entity.ParserResult;
+import org.breezee.mypeach.entity.SqlKeyValueEntity;
 import org.breezee.mypeach.enums.SqlTypeEnum;
 import org.breezee.mypeach.enums.TargetSqlParamTypeEnum;
 import org.breezee.mypeach.utils.ToolHelper;
@@ -79,4 +80,28 @@ public class SqlParsers {
         return parse(sqlType,sSql,dic,TargetSqlParamTypeEnum.NameParam);
     }
 
+    public Map<String, SqlKeyValueEntity> PreGetParam(String sSql)
+    {
+        return GetParser(sSql).PreGetParam(sSql);
+    }
+
+    public AbstractSqlParser GetParser(String sSql)
+    {
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.insertIntoPattern);
+        if (mc.find())
+        {
+            return new InsertSqlParser(properties);
+        }
+        mc = ToolHelper.getMatcher(sSql, StaticConstants.updateSetPattern);//先截取UPDATE SET部分
+        if (mc.find())
+        {
+            return new UpdateSqlParser(properties);
+        }
+        mc = ToolHelper.getMatcher(sSql, StaticConstants.deletePattern);//抽取出INSERT INTO TABLE_NAME(部分
+        if (mc.find())
+        {
+            return new DeleteSqlParser(properties);
+        }
+        return new SelectSqlParser(properties);
+    }
 }
