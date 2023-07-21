@@ -25,6 +25,8 @@ import java.util.regex.Pattern;
  * @email: guo7892000@126.com
  * @wechat: BreezeeHui
  * @date: 2022/4/12 21:52
+ * @history:
+ *   2023/07/20 BreezeeHui 增加非空参数无值时抛错。
  */
 public abstract class AbstractSqlParser {
 
@@ -178,6 +180,10 @@ public abstract class AbstractSqlParser {
                     if (param.getKeyMoreInfo().isMustValueReplace())
                     {
                         mapReplaceOrInCondition.put(sParamName, sParamName); //要被替换或IN清单的条件键
+                    }
+                }else{
+                    if(param.getKeyMoreInfo().isMust()){
+                        mapError.put(sParamName,sParamName + "参数非空，但未传值！");
                     }
                 }
                 if(ToolHelper.IsNotNull(param.getErrorMessage())){

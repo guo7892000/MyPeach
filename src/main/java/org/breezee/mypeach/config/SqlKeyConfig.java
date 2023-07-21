@@ -14,6 +14,10 @@ public class SqlKeyConfig {
      */
     public static final String NOT_NULL = "N";
     /**
+     * 键是否必填
+     */
+    public static final String IS_MUST = "M";
+    /**
      * 必须值替换，不使用参数
      */
     public static final String VALUE_REPLACE = "R";

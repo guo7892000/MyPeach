@@ -7,18 +7,23 @@ import java.util.*;
 
 /**
  * @objectName: 键更多信息
- * @description: 目前暂时只有一个N:非空
+ * @description: N或M-非空；R-替换；LI-整型列表；LS-字符列表
  * @author: guohui.huang
  * @email: guo7892000@126.com
  * @wechat: BreezeeHui
  * @date: 2022/4/16 23:53
  */
-@Data
 public class KeyMoreInfo {
     /**
      * 可空（默认是）
      */
     boolean nullable = true;
+
+    /// <summary>
+    /// 是否必填
+    /// </summary>
+    boolean isMust;
+
     /**
      * IN字符串(注：指括号里边部分)
      */
@@ -27,6 +32,38 @@ public class KeyMoreInfo {
      * 是否必须替换（有些键不做参数化时使用）
      */
     boolean mustValueReplace = false;
+
+    public boolean isNullable() {
+        return nullable;
+    }
+
+    public void setNullable(boolean nullable) {
+        this.nullable = nullable;
+    }
+
+    public boolean isMust() {
+        return !this.nullable; //取反
+    }
+
+    public void setMust(boolean must) {
+        this.nullable = !must; //取反
+    }
+
+    public String getInString() {
+        return inString;
+    }
+
+    public void setInString(String inString) {
+        this.inString = inString;
+    }
+
+    public boolean isMustValueReplace() {
+        return mustValueReplace;
+    }
+
+    public void setMustValueReplace(boolean mustValueReplace) {
+        this.mustValueReplace = mustValueReplace;
+    }
 
     /**
      * 构建【键更多信息】对象
@@ -41,7 +78,7 @@ public class KeyMoreInfo {
             String sOne = arr[i];
             if(sOne.isEmpty()) continue;
 
-            if(SqlKeyConfig.NOT_NULL.equals(sOne)){
+            if(SqlKeyConfig.NOT_NULL.equals(sOne) || SqlKeyConfig.IS_MUST.equals(sOne)){
                 moreInfo.setNullable(false);//非空
             } else if(SqlKeyConfig.VALUE_REPLACE.equals(sOne)){
                 moreInfo.setMustValueReplace(true);//必须替换

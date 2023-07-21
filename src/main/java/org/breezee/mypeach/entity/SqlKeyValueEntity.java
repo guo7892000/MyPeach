@@ -15,6 +15,8 @@ import java.util.Map;
  * @email: guo7892000@126.com
  * @wechat: BreezeeHui
  * @date: 2022/4/12 16:45
+ * @history:
+ *   2023/07/21 BreezeeHui 针对Like的前后模糊查询，其键值也相应增加%，以支持模糊查询
  */
 @Data
 public class SqlKeyValueEntity {
@@ -131,9 +133,11 @@ public class SqlKeyValueEntity {
             entity.setHasValue(true);
             if(entity.hasLikePrefix){
                 entity.setReplaceKeyWithValue("%" + entity.getReplaceKeyWithValue());
+                entity.setKeyValue("%" +entity.getKeyValue());
             }
             if(entity.hasLikeSuffix){
                 entity.setReplaceKeyWithValue(entity.getReplaceKeyWithValue() + "%");
+                entity.setKeyValue(entity.getKeyValue()+"%");
             }
             if(entity.hasSingleQuotes){
                 entity.setReplaceKeyWithValue("'" + entity.getReplaceKeyWithValue() + "'");

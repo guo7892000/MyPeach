@@ -18,6 +18,8 @@ import java.util.regex.Matcher;
  * @email: guo7892000@126.com
  * @wechat: BreezeeHui
  * @date: 2022/4/16 22:54
+ * @history:
+ *   2023/07/20 BreezeeHui 增加预获取参数方法，方便测试参数赋值。
  */
 public class SqlParsers {
 
@@ -58,22 +60,7 @@ public class SqlParsers {
      */
     public ParserResult parse(String sSql, Map<String, Object> dic, TargetSqlParamTypeEnum paramTypeEnum)
     {
-        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.insertIntoPattern);
-        if (mc.find())
-        {
-            return new InsertSqlParser(properties).parse(sSql, dic, paramTypeEnum);
-        }
-        mc = ToolHelper.getMatcher(sSql, StaticConstants.updateSetPattern);//先截取UPDATE SET部分
-        if (mc.find())
-        {
-            return new UpdateSqlParser(properties).parse(sSql, dic, paramTypeEnum);
-        }
-        mc = ToolHelper.getMatcher(sSql, StaticConstants.deletePattern);//抽取出INSERT INTO TABLE_NAME(部分
-        if (mc.find())
-        {
-            return new DeleteSqlParser(properties).parse(sSql, dic, paramTypeEnum);
-        }
-        return new SelectSqlParser(properties).parse(sSql, dic, paramTypeEnum);
+        return GetParser(sSql).parse(sSql, dic, paramTypeEnum);
     }
 
     public ParserResult parse(SqlTypeEnum sqlType, String sSql, Map<String, Object> dic){
@@ -85,7 +72,7 @@ public class SqlParsers {
         return GetParser(sSql).PreGetParam(sSql);
     }
 
-    public AbstractSqlParser GetParser(String sSql)
+    private AbstractSqlParser GetParser(String sSql)
     {
         Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.insertIntoPattern);
         if (mc.find())

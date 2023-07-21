@@ -18,7 +18,7 @@ MyPeach是一个动态SQ转换工具，它能根据SQL中配置的键（默认�
     SELECT。。。UNION ALL SELECT..   
 ```
 * SQL语句键可带内置的校验规则描述，让SQL更安全  
-  条件使用：键字符支持'#MDLIST:N:LS#'格式，其中N表示非空，LS表示字符列表，LI为整型列表，即IN括号里的部分字符。  
+  条件使用：键字符支持'#MDLIST:N:R:LS#'格式，其中N或M表示非空，R表示值替换，LS表示字符列表，LI为整型列表，即IN括号里的部分字符。  
 * 只生成SQL，不执行。如需使用生成后的参数化SQL，需要从ParserResult中取出参数化列表，即mapQuery属性值，其为Map<string, SqlKeyValueEntity>类型。  
 * 生成SQL类型可选参数化、还是字符替换；对于字符串值中的单引号，会被剔除掉，然后再在值前后分别加上单引号。  
 ## 背景
