@@ -12,6 +12,8 @@ import java.util.*;
  * @email: guo7892000@126.com
  * @wechat: BreezeeHui
  * @date: 2022/4/16 23:53
+ * @history:
+ *    2023/07/27 BreezeeHui 增加LI和LS中传入的为字符时，先去掉单引号，根据传入值以逗号分隔后，重新做值替换。listConvert中传入值为空时直接返回。
  */
 public class KeyMoreInfo {
     /**
@@ -103,6 +105,9 @@ public class KeyMoreInfo {
      * @param stringFlag
      */
     private static void listConvert(Object objValue, KeyMoreInfo moreInfo,boolean stringFlag) {
+        if(objValue == null){
+            return;
+        }
         if(stringFlag){
             //String数组或集合
             if(objValue instanceof String[]){
@@ -122,7 +127,13 @@ public class KeyMoreInfo {
                 sList += "'";
                 moreInfo.setInString(sList);
                 moreInfo.setMustValueReplace(true);
+                return;
             }
+            //其他当作字符来处理
+            String[] split = objValue.toString().replace("'", "").split(",");
+            moreInfo.setInString("'" + String.join("','",split)+"'");
+            moreInfo.setMustValueReplace(true);
+            return;
         } else {
             //Integer数组或集合
             if(objValue instanceof Integer[]){
@@ -141,7 +152,14 @@ public class KeyMoreInfo {
                 }
                 moreInfo.setInString(sList);
                 moreInfo.setMustValueReplace(true);
+                return;
             }
+
+            //其他当作字符来处理
+            String[] split = objValue.toString().replace("'", "").split(",");
+            moreInfo.setInString(String.join(",",split));
+            moreInfo.setMustValueReplace(true);
+            return;
         }
 
     }
