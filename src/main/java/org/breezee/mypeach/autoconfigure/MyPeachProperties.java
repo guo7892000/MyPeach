@@ -1,6 +1,5 @@
 package org.breezee.mypeach.autoconfigure;
 
-import lombok.Data;
 import org.breezee.mypeach.enums.SqlKeyStyleEnum;
 import org.breezee.mypeach.enums.TargetSqlParamTypeEnum;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -14,7 +13,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @date: 2022/4/12 16:45
  */
 @ConfigurationProperties(prefix = "mypeach")
-@Data
 public class MyPeachProperties {
     /**
      * SQL中键的样式枚举
@@ -54,4 +52,60 @@ public class MyPeachProperties {
      * 注：相对路径时，开头不要加/，要以目录名开头。
      */
     private String logSqlPath = "";
+
+    public SqlKeyStyleEnum getKeyStyle() {
+        return keyStyle;
+    }
+
+    public void setKeyStyle(SqlKeyStyleEnum keyStyle) {
+        this.keyStyle = keyStyle;
+    }
+
+    public String getParamPrefix() {
+        return paramPrefix;
+    }
+
+    public void setParamPrefix(String paramPrefix) {
+        this.paramPrefix = paramPrefix;
+    }
+
+    public String getParamSuffix() {
+        return paramSuffix;
+    }
+
+    public void setParamSuffix(String paramSuffix) {
+        this.paramSuffix = paramSuffix;
+    }
+
+    public boolean isForbidAllTableUpdateOrDelete() {
+        return forbidAllTableUpdateOrDelete;
+    }
+
+    public void setForbidAllTableUpdateOrDelete(boolean forbidAllTableUpdateOrDelete) {
+        this.forbidAllTableUpdateOrDelete = forbidAllTableUpdateOrDelete;
+    }
+
+    public TargetSqlParamTypeEnum getTargetSqlParamTypeEnum() {
+        return targetSqlParamTypeEnum;
+    }
+
+    public void setTargetSqlParamTypeEnum(TargetSqlParamTypeEnum targetSqlParamTypeEnum) {
+        this.targetSqlParamTypeEnum = targetSqlParamTypeEnum;
+    }
+
+    public boolean isShowDebugSql() {
+        return showDebugSql;
+    }
+
+    public void setShowDebugSql(boolean showDebugSql) {
+        this.showDebugSql = showDebugSql;
+    }
+
+    public String getLogSqlPath() {
+        return logSqlPath;
+    }
+
+    public void setLogSqlPath(String logSqlPath) {
+        this.logSqlPath = logSqlPath;
+    }
 }

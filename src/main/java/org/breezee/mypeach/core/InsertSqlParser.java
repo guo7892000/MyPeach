@@ -35,25 +35,22 @@ public class InsertSqlParser extends AbstractSqlParser {
     @Override
     public String headSqlConvert(String sSql){
         StringBuilder sbHead = new StringBuilder();
-
-        sSql = insertValueConvert(sSql,sbHead);
-        if(ToolHelper.IsNull(sSql)){
-            return sbHead.toString();//当是INSERT INTO...VALUES...方式，则方法会返回空
+        //针对WITH...INSERT INTO...SELECT...的处理
+        sSql = withInsertIntoSelect(sSql, sbHead);
+        if (ToolHelper.IsNull(sSql))
+        {
+            return sbHead.toString();//当是WITH...INSERT INTO...SELECT...方式，则方法会返回空
         }
 
-        //4、INSERT INTO TABLE_NAME 。。 SELECT形式
-        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.commonSelectPattern);//抽取出INSERT INTO TABLE_NAME(部分
-        while (mc.find()){
-            sqlTypeEnum = SqlTypeEnum.INSERT_SELECT;
-            String sInsert = sSql.substring(0,mc.start()) + mc.group();
-            sInsert = complexParenthesesKeyConvert(sInsert,"");
-            sbHead.append(sInsert);//不变的INSERT INTO TABLE_NAME(部分先加入
-            sSql = sSql.substring(mc.end()).trim();
-            //FROM段处理
-            String sFinalSql = fromWhereSqlConvert(sSql,false);
-            sbHead.append(sFinalSql);
+        //针对INSERT INTO...WITH...SELECT...的处理
+        sSql = insertIntoWithSelect(sSql, sbHead);
+        if (ToolHelper.IsNull(sSql))
+        {
+            return sbHead.toString();//当是INSERT INTO...WITH...SELECT...方式，则方法会返回空
         }
-        return sbHead.toString();
+
+        //针对INSERT INTO...VALUES和INSERT INTO...SELECT的处理
+        return insertValueOrSelectConvert(sSql,sbHead);
     }
 
     /**
@@ -78,13 +75,59 @@ public class InsertSqlParser extends AbstractSqlParser {
         return sbHead.toString();
     }
 
+    /// <summary>
+    /// 针对SqlServer的withInsertIntoSelect
+    /// </summary>
+    /// <param name="sSql"></param>
+    /// <returns></returns>
+    private String withInsertIntoSelect(String sSql,StringBuilder sbHead)
+    {;
+        Matcher mc = ToolHelper.getMatcher(sSql, withInsertIntoSelectPartn);//抽取出INSERT INTO TABLE_NAME(部分
+        while (mc.find())
+        {
+            sqlTypeEnum = SqlTypeEnum.WITH_INSERT_SELECT;
+            String sInsert = sSql.substring(0, mc.start()) + mc.group();
+            sInsert = complexParenthesesKeyConvert(sInsert, "");
+            sbHead.append(sInsert);//不变的INSERT INTO TABLE_NAME(部分先加入
+            sSql = sSql.substring(mc.end()).trim();
+            //FROM段处理
+            String sFinalSql = fromWhereSqlConvert(sSql, false);
+            sbHead.append(sFinalSql);
+            sSql = "";//处理完毕清空SQL
+        }
+        return sSql;
+    }
+
+    /// <summary>
+    /// 针对MySql、Oracle、PostgreSQL、SQLite的insertIntoWithSelect
+    /// </summary>
+    /// <param name="sSql"></param>
+    /// <returns></returns>
+    private String insertIntoWithSelect(String sSql, StringBuilder sbHead)
+    {
+        Matcher mc = ToolHelper.getMatcher(sSql, insertIntoWithSelectPartn);//抽取出INSERT INTO TABLE_NAME(部分
+        while (mc.find())
+        {
+            sqlTypeEnum = SqlTypeEnum.INSERT_WITH_SELECT;
+            String sInsert = sSql.substring(0, mc.start()) + mc.group();
+            sInsert = complexParenthesesKeyConvert(sInsert, "");
+            sbHead.append(sInsert);//不变的INSERT INTO TABLE_NAME(部分先加入
+            sSql = sSql.substring(mc.end()).trim();
+            //FROM段处理
+            String sFinalSql = fromWhereSqlConvert(sSql, false);
+            sbHead.append(sFinalSql);
+            sSql = "";//处理完毕清空SQL
+        }
+        return sSql;
+    }
+
     /**
-     * INSERT INTO及VALUES处理
+     * INSERT INTO VALUES和INSERT INTO SELECT处理
      * @param sSql
      * @param sb
      * @return
      */
-    private String insertValueConvert(String sSql,StringBuilder sb){
+    private String insertValueOrSelectConvert(String sSql, StringBuilder sb){
         StringBuilder sbHead = new StringBuilder();
         StringBuilder sbTail = new StringBuilder();
         //1、抽取出INSERT INTO TABLE_NAME部分
@@ -99,6 +142,7 @@ public class InsertSqlParser extends AbstractSqlParser {
         String sInsert ="";
         String sPara="";
         if (mc.find()){
+            sqlTypeEnum = SqlTypeEnum.INSERT_VALUES;
             String sInsertKey = sSql.substring(0,mc.start()).trim();
             String sParaKey = sSql.substring(mc.end()).trim();
 
@@ -131,6 +175,20 @@ public class InsertSqlParser extends AbstractSqlParser {
             sbHead.append(")");
             sbTail.append(")");
             sSql = "";//处理完毕清空SQL
+        }else{
+            //4、INSERT INTO TABLE_NAME 。。 SELECT形式
+            mc = ToolHelper.getMatcher(sSql, StaticConstants.commonSelectPattern);//抽取出INSERT INTO TABLE_NAME(部分
+            while (mc.find()){
+                sqlTypeEnum = SqlTypeEnum.INSERT_SELECT;
+                sInsert = sSql.substring(0,mc.start()) + mc.group();
+                sInsert = complexParenthesesKeyConvert(sInsert,"");
+                sbHead.append(sInsert);//不变的INSERT INTO TABLE_NAME(部分先加入
+                sSql = sSql.substring(mc.end()).trim();
+                //FROM段处理
+                String sFinalSql = fromWhereSqlConvert(sSql,false);
+                sbHead.append(sFinalSql);
+            }
+            return sbHead.toString();
         }
         sb.append(sbHead.toString()+sbTail.toString());
         return sSql;

@@ -1,0 +1,4 @@
+/*SqlServer:必须是with在INSERT INTO之前*/
+with TMP_A AS(select #ID# as id,'#CNAME#' as name)
+INSERT INTO TEST_TABLE(ID,CNAME)
+select * from TMP_A

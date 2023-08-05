@@ -30,10 +30,12 @@ public class SqlKeyConfig {
      */
     public static final String INTEGE_LIST = "LI";
     /**
+     * 优先使用的配置：当同一个键出现多次时，会以F的配置为主
+     */
+    public static final String IS_FIRST = "F";
+    /**
      * 动态SQL配置关键字：
      * 使用场景如根据不同键值使用不同分组方式，在SQL中以注释方式做配置
      */
     public static final String DYNAMIC_SQL = "DYN";
-
-
 }

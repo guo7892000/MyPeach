@@ -7,6 +7,8 @@ package org.breezee.mypeach.config;
  * @email: guo7892000@126.com
  * @wechat: BreezeeHui
  * @date: 2022/4/12 16:45
+ * @history:
+ *   2023/08/04 BreezeeHui 修改remarkPatter正则式，对/**\/中间应该可以包括换行符
  */
 public class StaticConstants {
     public static final String parenthesesRoundKey = "##";
@@ -16,9 +18,17 @@ public class StaticConstants {
     public static final String HASH = "#";
     public static final String PERCENT = "%";
     /**
-     * sql备注的正则表达式：支持--和/***\/
+     * sql单行双减号注释的正则表达式：--注释内容
      */
-    public static final String remarkPatter = "--.*|(/\\*.*/*/)";
+    public static final String remarkPatterSingle2Reduce = "--.*";
+    /**
+     * sql单行#号注释的正则表达式：#注释内容
+     */
+    public static final String remarkPatterSingleHash = "#.*";
+    /**
+     * sql多行注释的正则表达式：/***\/
+     */
+    public static final String remarkPatterMultiLine = "/\\*|\\*/";
     /**
      * 左括号或右括号的正则式
      */
@@ -84,10 +94,12 @@ public class StaticConstants {
      * VALUES正则式：)VALUES(，但括号部分已被替换，所以旧正则式已不适用："\\)\\s*VALUES\\s*\\(\\s*"
      */
     public static final String valuesPattern = "\\s*VALUES\\s*"; //正则式：)VALUES(
+
+    public static final String insertIntoPatternCommon = "INSERT\\s+INTO\\s+\\S+\\s*";
     /**
      * INSERT INTO正则式：INSERT INTO TABLE_NAME(，但括号部分已被替换，所以旧正则式已不适用："^INSERT\\s+INTO\\s+\\S+\\s*\\(\\s*"
      */
-    public static final String insertIntoPattern = "^INSERT\\s+INTO\\s+\\S+\\s*";
+    public static final String insertIntoPattern = "^" + insertIntoPatternCommon;
 
     //public static final String insertSelectPattern = "\\s*\\)" + commonSelectPattern;
     public static final String updateSetPattern = "^UPDATE\\s*\\S*\\s*SET\\s*";//正则式：UPDATE TABLE_NAME SET

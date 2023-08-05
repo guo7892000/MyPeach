@@ -41,6 +41,8 @@ public class SqlParsers {
         switch (sqlType){
             case INSERT_VALUES:
             case INSERT_SELECT:
+            case WITH_INSERT_SELECT:
+            case INSERT_WITH_SELECT:
                 return new InsertSqlParser(properties).parse(sSql,dic,paramTypeEnum);
             case UPDATE:
                 return new UpdateSqlParser(properties).parse(sSql,dic,paramTypeEnum);

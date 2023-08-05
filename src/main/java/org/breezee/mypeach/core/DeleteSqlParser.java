@@ -1,6 +1,5 @@
 package org.breezee.mypeach.core;
 
-import lombok.extern.slf4j.Slf4j;
 import org.breezee.mypeach.autoconfigure.MyPeachProperties;
 import org.breezee.mypeach.config.StaticConstants;
 import org.breezee.mypeach.enums.SqlTypeEnum;
@@ -16,7 +15,6 @@ import java.util.regex.Matcher;
  * @wechat: BreezeeHui
  * @date: 2022/4/12 16:45
  */
-@Slf4j
 public class DeleteSqlParser extends AbstractSqlParser {
 
     /**

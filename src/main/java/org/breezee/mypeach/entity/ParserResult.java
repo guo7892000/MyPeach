@@ -1,7 +1,5 @@
 package org.breezee.mypeach.entity;
 
-import lombok.Data;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -14,7 +12,6 @@ import java.util.Map;
  * @wechat: BreezeeHui
  * @date: 2022/4/17 0:21
  */
-@Data
 public class ParserResult {
     /**
      * 状态码:0成功，1失败
@@ -50,6 +47,79 @@ public class ParserResult {
      */
     Map<String, SqlKeyValueEntity> mapQuery = new HashMap<>();
     Map<String, Object> mapObject = new HashMap<>();
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public String getSourceSql() {
+        return sourceSql;
+    }
+
+    public void setSourceSql(String sourceSql) {
+        this.sourceSql = sourceSql;
+    }
+
+    public String getSql() {
+        return sql;
+    }
+
+    public void setSql(String sql) {
+        this.sql = sql;
+    }
+
+    public ArrayList getPositionCondition() {
+        return positionCondition;
+    }
+
+    public void setPositionCondition(ArrayList positionCondition) {
+        this.positionCondition = positionCondition;
+    }
+
+    public Map<String, String> getMapError() {
+        return mapError;
+    }
+
+    public void setMapError(Map<String, String> mapError) {
+        this.mapError = mapError;
+    }
+
+    public Map<String, SqlKeyValueEntity> getMapQuery() {
+        return mapQuery;
+    }
+
+    public void setMapQuery(Map<String, SqlKeyValueEntity> mapQuery) {
+        this.mapQuery = mapQuery;
+    }
+
+    public Map<String, Object> getMapObject() {
+        return mapObject;
+    }
+
+    public void setMapObject(Map<String, Object> mapObject) {
+        this.mapObject = mapObject;
+    }
+
+    public Map<String, String> getMapString() {
+        return mapString;
+    }
+
+    public void setMapString(Map<String, String> mapString) {
+        this.mapString = mapString;
+    }
+
     Map<String, String> mapString = new HashMap<>();
 
     public static ParserResult success(String msg,String sSql,Map<String, SqlKeyValueEntity> queryMap,Map<String, Object> mapObject,Map<String, String> mapString,ArrayList pCondition){

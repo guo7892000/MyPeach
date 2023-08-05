@@ -1,6 +1,5 @@
 package org.breezee.mypeach.entity;
 
-import lombok.Data;
 import org.breezee.mypeach.config.SqlKeyConfig;
 
 import java.util.*;
@@ -14,6 +13,7 @@ import java.util.*;
  * @date: 2022/4/16 23:53
  * @history:
  *    2023/07/27 BreezeeHui 增加LI和LS中传入的为字符时，先去掉单引号，根据传入值以逗号分隔后，重新做值替换。listConvert中传入值为空时直接返回。
+ *    2023/08/04 BreezeeHui 键设置增加优先使用配置项（F）的支持，即当一个键出现多次时，优先使用该配置内容。
  */
 public class KeyMoreInfo {
     /**
@@ -25,6 +25,11 @@ public class KeyMoreInfo {
     /// 是否必填
     /// </summary>
     boolean isMust;
+
+    /*
+    * 是否优先使用的配置（默认否）
+    * */
+    boolean isFirst = false;
 
     /**
      * IN字符串(注：指括号里边部分)
@@ -49,6 +54,14 @@ public class KeyMoreInfo {
 
     public void setMust(boolean must) {
         this.nullable = !must; //取反
+    }
+
+    public boolean isFirst() {
+        return isFirst;
+    }
+
+    public void setFirst(boolean first) {
+        isFirst = first;
     }
 
     public String getInString() {
@@ -84,7 +97,9 @@ public class KeyMoreInfo {
                 moreInfo.setNullable(false);//非空
             } else if(SqlKeyConfig.VALUE_REPLACE.equals(sOne)){
                 moreInfo.setMustValueReplace(true);//必须替换
-            } else if(SqlKeyConfig.STRING_LIST.equals(sOne)){
+            } else if(SqlKeyConfig.IS_FIRST.equals(sOne)){
+                moreInfo.setFirst(true);//是否优先使用本配置
+            }else if(SqlKeyConfig.STRING_LIST.equals(sOne)){
                 listConvert(objValue, moreInfo,true);
             } else if(SqlKeyConfig.INTEGE_LIST.equals(sOne)){
                 listConvert(objValue, moreInfo,false);

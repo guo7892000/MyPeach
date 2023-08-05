@@ -56,4 +56,26 @@ public class InsertTest {
         ParserResult result = sqlParsers.parse(SqlTypeEnum.INSERT_SELECT,sSql, dicQuery);
         System.out.println(result.getCode().equals("0")?result.getSql():result.getMessage());//0转换成功，返回SQL；1转换失败，返回错误信息
     }
+
+    @Test
+    void insertWithSelect() throws IOException {
+        String sSql = new String(Files.readAllBytes(Paths.get(testFilePrefix + "03_InsertWithSelect.txt")));
+        Map<String, Object> dicQuery = new HashMap<>();
+        dicQuery.put("#ID#",10);//必须
+        dicQuery.put("#CNAME#","张三大");
+        //InsertSqlParser sqlAnalyzer = new InsertSqlParser(new MyPeachProperties());
+        ParserResult result = sqlParsers.parse(SqlTypeEnum.INSERT_WITH_SELECT,sSql, dicQuery);
+        System.out.println(result.getCode().equals("0")?result.getSql():result.getMessage());//0转换成功，返回SQL；1转换失败，返回错误信息
+    }
+
+    @Test
+    void withInsertSelect() throws IOException {
+        String sSql = new String(Files.readAllBytes(Paths.get(testFilePrefix + "04_WithInsertSelect.txt")));
+        Map<String, Object> dicQuery = new HashMap<>();
+        dicQuery.put("#ID#",10);//必须
+        dicQuery.put("#CNAME#","张三大");
+        //InsertSqlParser sqlAnalyzer = new InsertSqlParser(new MyPeachProperties());
+        ParserResult result = sqlParsers.parse(SqlTypeEnum.WITH_INSERT_SELECT,sSql, dicQuery);
+        System.out.println(result.getCode().equals("0")?result.getSql():result.getMessage());//0转换成功，返回SQL；1转换失败，返回错误信息
+    }
 }

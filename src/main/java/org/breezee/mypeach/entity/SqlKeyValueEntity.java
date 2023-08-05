@@ -1,6 +1,5 @@
 package org.breezee.mypeach.entity;
 
-import lombok.Data;
 import org.breezee.mypeach.autoconfigure.MyPeachProperties;
 import org.breezee.mypeach.config.StaticConstants;
 import org.breezee.mypeach.enums.SqlKeyStyleEnum;
@@ -18,7 +17,6 @@ import java.util.Map;
  * @history:
  *   2023/07/21 BreezeeHui 针对Like的前后模糊查询，其键值也相应增加%，以支持模糊查询
  */
-@Data
 public class SqlKeyValueEntity {
     /**
      * 键字符(最原始的格式)：例如 '%#CITY_NAME#%'
@@ -69,6 +67,110 @@ public class SqlKeyValueEntity {
      * 错误信息
      */
     private String errorMessage;
+
+    public String getKeyString() {
+        return keyString;
+    }
+
+    public void setKeyString(String keyString) {
+        this.keyString = keyString;
+    }
+
+    public boolean isHasSingleQuotes() {
+        return hasSingleQuotes;
+    }
+
+    public void setHasSingleQuotes(boolean hasSingleQuotes) {
+        this.hasSingleQuotes = hasSingleQuotes;
+    }
+
+    public boolean isHasLikePrefix() {
+        return hasLikePrefix;
+    }
+
+    public void setHasLikePrefix(boolean hasLikePrefix) {
+        this.hasLikePrefix = hasLikePrefix;
+    }
+
+    public boolean isHasLikeSuffix() {
+        return hasLikeSuffix;
+    }
+
+    public void setHasLikeSuffix(boolean hasLikeSuffix) {
+        this.hasLikeSuffix = hasLikeSuffix;
+    }
+
+    public boolean isHasValue() {
+        return hasValue;
+    }
+
+    public void setHasValue(boolean hasValue) {
+        this.hasValue = hasValue;
+    }
+
+    public String getKeyName() {
+        return keyName;
+    }
+
+    public void setKeyName(String keyName) {
+        this.keyName = keyName;
+    }
+
+    public String getKeyNameMore() {
+        return keyNameMore;
+    }
+
+    public void setKeyNameMore(String keyNameMore) {
+        this.keyNameMore = keyNameMore;
+    }
+
+    public String getKeyNamePreSuffix() {
+        return keyNamePreSuffix;
+    }
+
+    public void setKeyNamePreSuffix(String keyNamePreSuffix) {
+        this.keyNamePreSuffix = keyNamePreSuffix;
+    }
+
+    public Object getKeyValue() {
+        return keyValue;
+    }
+
+    public void setKeyValue(Object keyValue) {
+        this.keyValue = keyValue;
+    }
+
+    public Object getReplaceKeyWithValue() {
+        return replaceKeyWithValue;
+    }
+
+    public void setReplaceKeyWithValue(Object replaceKeyWithValue) {
+        this.replaceKeyWithValue = replaceKeyWithValue;
+    }
+
+    public String getParamString() {
+        return paramString;
+    }
+
+    public void setParamString(String paramString) {
+        this.paramString = paramString;
+    }
+
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
+    }
+
+    public KeyMoreInfo getKeyMoreInfo() {
+        return keyMoreInfo;
+    }
+
+    public void setKeyMoreInfo(KeyMoreInfo keyMoreInfo) {
+        this.keyMoreInfo = keyMoreInfo;
+    }
 
     /**
      * 更多键信息

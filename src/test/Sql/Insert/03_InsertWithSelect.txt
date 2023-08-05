@@ -1,0 +1,12 @@
+/*MySql、Oracle:必须是INSERT INTO在with之前。Oracle查空表必须加FROM DUAL，MySql可有可无。*/
+INSERT INTO TEST_TABLE(ID,CNAME) # 测试222
+with TMP_A AS(select #ID# as id,'#CNAME#' as name FROM DUAL)
+select * from TMP_A  #测试333
+
+/* 注释222
+ */
+/* PostgreSQL、SQLite:表名和列名要加双引号。必须是INSERT INTO在with之前。SQLite不能加FROM DUAL。
+INSERT INTO "TEST_TABLE"("ID","CNAME")
+with TMP_A AS(select 2 as id,'zhanshan1' as name)  # 测试44
+select * from TMP_A 
+*/
