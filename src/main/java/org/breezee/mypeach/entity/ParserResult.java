@@ -45,11 +45,12 @@ public class ParserResult {
     /**
      * 有效条件集合
      */
-    Map<String, SqlKeyValueEntity> mapQuery = new HashMap<>();
-    Map<String, Object> mapObject = new HashMap<>();
+    Map<String, SqlKeyValueEntity> entityQuery = new HashMap<>();
+    Map<String, String> stringQuery = new HashMap<>();
+    Map<String, Object> objectQuery = new HashMap<>();
 
     public String getCode() {
-        return code;
+        return this.code;
     }
 
     public void setCode(String code) {
@@ -57,7 +58,7 @@ public class ParserResult {
     }
 
     public String getMessage() {
-        return message;
+        return this.message;
     }
 
     public void setMessage(String message) {
@@ -65,7 +66,7 @@ public class ParserResult {
     }
 
     public String getSourceSql() {
-        return sourceSql;
+        return this.sourceSql;
     }
 
     public void setSourceSql(String sourceSql) {
@@ -73,7 +74,7 @@ public class ParserResult {
     }
 
     public String getSql() {
-        return sql;
+        return this.sql;
     }
 
     public void setSql(String sql) {
@@ -81,7 +82,7 @@ public class ParserResult {
     }
 
     public ArrayList getPositionCondition() {
-        return positionCondition;
+        return this.positionCondition;
     }
 
     public void setPositionCondition(ArrayList positionCondition) {
@@ -89,47 +90,47 @@ public class ParserResult {
     }
 
     public Map<String, String> getMapError() {
-        return mapError;
+        return this.mapError;
     }
 
     public void setMapError(Map<String, String> mapError) {
         this.mapError = mapError;
     }
 
-    public Map<String, SqlKeyValueEntity> getMapQuery() {
-        return mapQuery;
+    public Map<String, SqlKeyValueEntity> getEntityQuery() {
+        return this.entityQuery;
     }
 
-    public void setMapQuery(Map<String, SqlKeyValueEntity> mapQuery) {
-        this.mapQuery = mapQuery;
+    public void setEntityQuery(Map<String, SqlKeyValueEntity> stringQuery) {
+        this.entityQuery = stringQuery;
     }
 
-    public Map<String, Object> getMapObject() {
-        return mapObject;
+    public Map<String, Object> getObjectQuery() {
+        return this.objectQuery;
     }
 
-    public void setMapObject(Map<String, Object> mapObject) {
-        this.mapObject = mapObject;
+    public void setObjectQuery(Map<String, Object> mapObject) {
+        this.objectQuery = mapObject;
     }
 
-    public Map<String, String> getMapString() {
-        return mapString;
+    public Map<String, String> getStringQuery() {
+        return this.stringQuery;
     }
 
-    public void setMapString(Map<String, String> mapString) {
-        this.mapString = mapString;
+    public void setStringQuery(Map<String, String> stringQuery) {
+        this.stringQuery = stringQuery;
     }
 
-    Map<String, String> mapString = new HashMap<>();
 
-    public static ParserResult success(String msg,String sSql,Map<String, SqlKeyValueEntity> queryMap,Map<String, Object> mapObject,Map<String, String> mapString,ArrayList pCondition){
+
+    public static ParserResult success(String msg,String sSql,Map<String, SqlKeyValueEntity> entityQuery,Map<String, Object> objectQuery,Map<String, String> stringQuery,ArrayList pCondition){
         ParserResult result = new ParserResult();
         result.setCode("0");
         result.setSql(sSql);
         result.setMessage(msg);
-        result.setMapQuery(queryMap);
-        result.setMapObject(mapObject);
-        result.setMapString(mapString);
+        result.setEntityQuery(entityQuery);
+        result.setObjectQuery(objectQuery);
+        result.setStringQuery(stringQuery);
         result.setPositionCondition(pCondition);
         return result;
     }

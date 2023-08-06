@@ -17,7 +17,7 @@ MyPeach是一个动态SQ转换工具，它能根据SQL中配置的键（默认�
     DELETE FROM...WHERE...  
     SEELCT...FROM...WHERE...GROUP BY...HAVING...ORDER BY...LIMIT...  
     WITH...AS (),WITH...AS () SELECT...FROM...WHERE...
-    SELECT。。。UNION ALL SELECT..   
+    SELECT...UNION ALL SELECT...   
 ```
 * SQL语句键可带内置的校验规则描述，让SQL更安全  
   条件使用：键字符支持'#MDLIST:N:R:LS:F#'格式，其中N或M表示非空，R表示值替换，LS表示字符列表，LI为整型列表，即IN括号里的部分字符；F表示优先使用的配置。  
@@ -49,7 +49,8 @@ JAVA的技术栈太广，无奈只能靠日积月累），我重新对此进行�
     * 8.1.1 处理FROM  
     * 8.1.2 处理WHERE，更新WHERE处理标志为true  
   * 8.2 如果WHERE处理标志为false，那么处理WHERE  
-* 9. 最后返回ParserResult对象，转换SQL结束。  
+* 9. 最后返回ParserResult对象，转换SQL结束。其中返回的结果对象中，sql为转换为参数化后的SQL，mapObject为有效参数值集合，mapQuery为有效详细参数实体信息，mapError为转换过程的错误信息，
+*    positionCondition为位置参数值，code为返回参数（0成功，1失败），message为成功或失败信息，sourceSql为转换前的SQL。
 * 10. 一些关键逻辑描述：  
    对于每个SQL段，都会按AND或OR进行分拆，保证每次处理的键段SQL只包括一个参数，这样就方便整段SQL的处理：修改还是删除。但分拆出来的SQL段， 
    首先还是先做是否有##序号##，有则需要对其内部先分析：先做子查询分析，如果是子查询，则要调用一次SELECT语句的头部分析（即把它也当作一个完整的SELCT语句来转换）；

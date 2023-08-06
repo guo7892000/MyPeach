@@ -290,7 +290,7 @@ public abstract class AbstractSqlParser {
         //转换成功
         result = ParserResult.success(sFinalSql, mapSqlKeyValid,mapObject,mapString, positionParamConditonList);
         result.setSql(sFinalSql);
-        result.setMapQuery(mapSqlKeyValid);
+        result.setEntityQuery(mapSqlKeyValid);
 
         if(myPeachProp.isShowDebugSql()){
             System.out.println(sFinalSql);
