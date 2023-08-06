@@ -172,3 +172,4 @@ Content to be provided for submitting bugs:
 *2. Content of Key Value Condition Set (Map<String, Object>)
 *3. Problem Description
 [Email feedback suggestions or questions]（ guo7892000@126.com ）
+[WeChat] BreezeeHui
