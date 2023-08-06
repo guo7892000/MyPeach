@@ -378,12 +378,13 @@ public abstract class AbstractSqlParser {
                 iRight = 0;
             }
         }
-        //最后的字符
+        //有注释时，还要处理最后的字符
         if(iGroupStart>0){
             sb.append(sSql.substring(iGroupStart));
+            return sb.toString().trim();
         }
-        //返回SQL
-        return sb.toString().trim();
+        //没有注释时，直接返回原SQL
+        return sSql;
     }
 
     /**
