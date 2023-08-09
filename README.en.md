@@ -38,33 +38,33 @@ Then there are further functional enhancements, such as on-demand configuration,
 I really dislike this approach because I have to run to know if there are any errors in my SQL. However, this project's approach allows me to write the most complete SQL and run it in the query analyzer (of course, I need to comment out the IN condition section first), so that I can
 Check for grammar errors; In the key configuration of SQL, verification information can also be added to ensure the correctness of incoming parameters.
 
-##Implementation ideas
+##  Implementation ideas
 Using Spring Boot's SPI mechanism (automated configuration); More emphasis is placed on character construction, concatenation, deletion, and modification, using a single threaded approach that concatenates SQL statements from front to back,
 How efficient is it in large quantities?? The following are the specific processing ideas:
-*1. Pass in SQL and key value sets that have already been keyed (# Key Configuration #) (Map<String, Object>)
-*2. Pre processing: Remove spaces before and after SQL. Note: Do not convert to uppercase here as some values are case sensitive, and converting all to uppercase will result in SQL condition errors!
-*3. Exclude remarks: comments that start with -- or match/* */
-*4. Extract the key set and valid key set from SQL: If there are non empty keys passed in but no corresponding values passed in, interrupt the conversion, and return information such as unsuccessful
-*5. Remove comment information: comments starting with # (note: the # key will be replaced with other characters before matching)
-*6. For regular expressions that conform to (), replace the loop with: # # ordinal # #, which facilitates controlling SQL statement segments from a large perspective and conducting accurate matching analysis
-*7. Call the head processing method of the subclass: handle while disassembling
-*8. Subclass calls parent class's FROM processing method
+* 1. Pass in SQL and key value sets that have already been keyed (# Key Configuration #) (Map<String, Object>)
+* 2. Pre processing: Remove spaces before and after SQL. Note: Do not convert to uppercase here as some values are case sensitive, and converting all to uppercase will result in SQL condition errors!
+* 3. Exclude remarks: comments that start with -- or match/* */
+* 4. Extract the key set and valid key set from SQL: If there are non empty keys passed in but no corresponding values passed in, interrupt the conversion, and return information such as unsuccessful
+* 5. Remove comment information: comments starting with # (note: the # key will be replaced with other characters before matching)
+* 6. For regular expressions that conform to (), replace the loop with: # # ordinal # #, which facilitates controlling SQL statement segments from a large perspective and conducting accurate matching analysis
+* 7. Call the head processing method of the subclass: handle while disassembling
+* 8. Subclass calls parent class's FROM processing method
 *   8.1 Existence of From:
 *       8.1.1 Handling from
 *       8.1.2 Process WHERE and update the WHERE processing flag to true
 *   8.2 If the WHERE processing flag is false, then process the WHERE
-*9 Finally, return the ParserResult object and complete the SQL conversion.
-*10 Some key logical descriptions:
+* 9 Finally, return the ParserResult object and complete the SQL conversion.
+* 10 Some key logical descriptions:
 For each SQL segment, it will be split by AND or OR to ensure that the key segment SQL processed each time only includes one parameter, which facilitates the processing of the entire SQL segment: modify or delete. But the split SQL segment,
 Firstly, it is necessary to first check whether there is a # # sequence number # #. If there is, it needs to be analyzed internally: first, perform sub query analysis. If it is a sub query, call the header analysis of the SELECT statement (that is, treat it as a complete SELECT statement to convert);
 If it is not a subquery, then it needs to be AND or OR split, and then complex left and right parenthesis processing methods (processing at the beginning and end of the left parenthesis) need to be called. Finally, call the conversion method for a single key (parameterization or character replacement).
 During each SQL segment processing, spaces before and after are usually removed. The logic here is not easy to describe. Please refer to the comments in the code for details!
 
 ## Tutorial
-*1 Download the source code and compile this project command:
+* 1 Download the source code and compile this project command:
 `Mvn clean package install`
-*2 Using this library in other projects:
-*2.1 Introducing Dependencies:
+* 2 Using this library in other projects:
+*  2.1 Introducing Dependencies:
 ```
 <dependency>
     <groupId>org.breezee</groupId>
@@ -72,16 +72,16 @@ During each SQL segment processing, spaces before and after are usually removed.
     <version>1.0.1</version>
 </dependency>
 ```
-2.2 Modify Configuration: The following are the default values (parameterization, with # sign before and after the key name, generated parameterization prefix of @, and empty suffix). Generally, it is sufficient to maintain the default values without adding the following configuration.
+*  2.2 Modify Configuration: The following are the default values (parameterization, with # sign before and after the key name, generated parameterization prefix of @, and empty suffix). Generally, it is sufficient to maintain the default values without adding the following configuration.
 ````
 mypeach.target-sql-param-type-enum=param
 mypeach.key-style=pound_sign_around
 mypeach.param-prefix=@
 mypeach.param-suffix=
 ````
-*2.3 Usage: Key characters support '# MDLIST: N: R: LS #' format:
+*  2.3 Usage: Key characters support '# MDLIST: N: R: LS #' format:
 Where N represents non empty; R represents a mandatory value replacement; Both LS and LI represent characters within IN parentheses, which can be passed into an array or ArrayList. Where LI is an integer list, with no quotes around the values.
-*2.3.1 Automatic injection objects
+*   2.3.1 Automatic injection objects
 ```
     String testFilePrefix = "src/main/resources/sql/";
     @Autowired
@@ -89,7 +89,7 @@ Where N represents non empty; R represents a mandatory value replacement; Both L
     @Autowired
     SqlParsers sqlParsers;  //方式二（推荐）：转换方法parse第一个参数需要指定SQL语句类型
 ```
-*2.3.2 Method calls
+*   2.3.2 Method calls
 ````
     public String selecet() throws IOException {
         String sSql = new String(Files.readAllBytes(Paths.get(testFilePrefix + "01_Select.txt")));
@@ -157,7 +157,7 @@ LEFT JOIN BC C ON C.ID = B.ID
 AND EXISTS(SELECT 1 FROM TBF G WHERE G.ID = A.ID)
 ```
 
-##Future and Prospects
+##  Future and Prospects
 The path of technology is destined to be full of ups and downs and infinite hardships, but no difficulty can stop my love!! The open source framework has taught me a lot of skills, and I am grateful for their selfless efforts. Always using someone else's,
 Actually, I also really want to have my own open source project that can help solve a pain point in everyone's development and further reduce workload (often 996 is a physical test).
 MyPeach is a solution that I personally came up with after experiencing the pain points of dynamic SQL (whether it's code concatenation or XML conditional configuration used in Mybatis) and years of accumulation, as well as the idle time I spent looking for a job in March and April 2022, which allowed me to contemplate and come up with a solution.
@@ -166,10 +166,10 @@ So I am still very optimistic about this small project, it will be popular in th
 It is very difficult to attract others' attention. If you have any questions or ideas, please give me feedback or directly participate in the improvement and enhancement of the code. My own project is like my own son, and I will continuously improve it responsibly. I hope he can bring you a wonderful SQL experience,
 I also hope that in the future, this tool can be better integrated into Mybatis plug, which will be even more perfect^_^
 
-##Issue and bug submission
-Content to be provided for submitting bugs:
-*1. SQL that has been keyed
-*2. Content of Key Value Condition Set (Map<String, Object>)
-*3. Problem Description
-[Email feedback suggestions or questions]（ guo7892000@126.com ）
-[WeChat] BreezeeHui
+##  Issue and bug submission
+Content to be provided for submitting bugs:    
+* 1. SQL that has been keyed    
+* 2. Content of Key Value Condition Set (Map<String, Object>)    
+* 3. Problem Description    
+[Email feedback suggestions or questions]（ guo7892000@126.com ）    
+[WeChat] BreezeeHui    
