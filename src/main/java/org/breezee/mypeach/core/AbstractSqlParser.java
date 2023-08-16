@@ -8,6 +8,7 @@ import org.breezee.mypeach.enums.SqlKeyStyleEnum;
 import org.breezee.mypeach.enums.SqlTypeEnum;
 import org.breezee.mypeach.enums.TargetSqlParamTypeEnum;
 import org.breezee.mypeach.utils.ToolHelper;
+import org.breezee.mypeach.config.SqlKeyConfig;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -30,13 +31,16 @@ import java.util.regex.Matcher;
  *   2023/07/29 BreezeeHui 增加WITH INSERT INTO SELECT 和INSERT INTO WITH SELECT的支持。
  *   2023/08/04 BreezeeHui 键设置增加优先使用配置项（F）的支持，即当一个键出现多次时，优先使用带有F配置的内容。
  *   2023/08/05 BreezeeHui 增加#号注释支持；修正/**\/注释的匹配与移除。
+ *   2023/08/11 BreezeeHui 将移除注释抽成一个独立方法RemoveSqlRemark；增加SQL类型是否正确的抽象方法isRightSqlType。
  */
 public abstract class AbstractSqlParser {
 
     protected MyPeachProperties myPeachProp;
-    protected String keyPrefix = "#";
-    protected String keySuffix = "#";
-    protected String keyPattern;//键正则式
+//    protected String keyPrefix = "#";
+//    protected String keySuffix = "#";
+//    protected String keyPattern;//键正则式
+    protected String keyPatternHashLeftBrace;//键正则式##
+    protected String keyPatternHash;//键正则式#{}
 
     /**
      * 优先处理的括号会被替换的两边字符加中间一个序号值，例如：##1##
@@ -78,19 +82,23 @@ public abstract class AbstractSqlParser {
      */
     public AbstractSqlParser(MyPeachProperties prop){
         myPeachProp = prop;
+        //参数形式
+        keyPatternHashLeftBrace = "'?%?\\#\\{\\w+(:\\w+(-\\w+)?)*\\}%?'?";//键正则式，注这里针对#{}都要加上转义符，否则会报错！！
+        keyPatternHash = "'?%?" + StaticConstants.HASH + "\\w+(:\\w+(-\\w+)?)*" + StaticConstants.HASH + "%?'?";//键正则式
 
-        if(prop.getKeyStyle()== SqlKeyStyleEnum.POUND_SIGN_BRACKETS){
-            keyPrefix = StaticConstants.HASH_LEFT_BRACE;
-            keySuffix = StaticConstants.RIGHT_BRACE;
-            //还要支持类似：AND MODIFIER IN ('#MDLIST:N:LS:L-S#')的键
-            keyPattern = "'?%?\\#\\{\\w+(:\\w+(-\\w+)?)*\\}%?'?";//键正则式，注这里针对#{}都要加上转义符，否则会报错！！
-        }else {
-            keyPrefix = StaticConstants.HASH;
-            keySuffix = StaticConstants.HASH;
-            //还要支持类似：AND MODIFIER IN ('#MDLIST:N:LS:L-S#')的键
-            keyPattern = "'?%?"+ keyPrefix +"\\w+(:\\w+(-\\w+)?)*"+ keySuffix +"%?'?";//键正则式
-        }
-        if(parenthesesRoundKey.equals(keyPrefix)){
+//        if(prop.getKeyStyle()== SqlKeyStyleEnum.POUND_SIGN_BRACKETS){
+//            keyPrefix = StaticConstants.HASH_LEFT_BRACE;
+//            keySuffix = StaticConstants.RIGHT_BRACE;
+//            //还要支持类似：AND MODIFIER IN ('#MDLIST:N:LS:L-S#')的键
+//            keyPattern = "'?%?\\#\\{\\w+(:\\w+(-\\w+)?)*\\}%?'?";//键正则式，注这里针对#{}都要加上转义符，否则会报错！！
+//        }else {
+//            keyPrefix = StaticConstants.HASH;
+//            keySuffix = StaticConstants.HASH;
+//            //还要支持类似：AND MODIFIER IN ('#MDLIST:N:LS:L-S#')的键
+//            keyPattern = "'?%?"+ keyPrefix +"\\w+(:\\w+(-\\w+)?)*"+ keySuffix +"%?'?";//键正则式
+//        }
+
+        if(parenthesesRoundKey.equals(StaticConstants.HASH)){
             parenthesesRoundKey+=StaticConstants.HASH;
         }
         parenthesesRoundKeyPattern = parenthesesRoundKey + "\\d+" + parenthesesRoundKey;
@@ -119,34 +127,180 @@ public abstract class AbstractSqlParser {
     /// </summary>
     /// <param name="sSql"></param>
     /// <returns></returns>
-    public Map<String, SqlKeyValueEntity> PreGetParam(String sSql)
+    public Map<String, SqlKeyValueEntity> PreGetParam(String sSql,Map<String, Object> dic)
     {
         Map<String, SqlKeyValueEntity> dicReturn = new HashMap<String, SqlKeyValueEntity>();
-        //1、预处理：去掉前后空字符：注这里不要转换为大写，因为有些条件里有字母值，如转换为大写，则会使条件失效！！
-        String sSqlNew = sSql.trim(); //.toUpperCase();//将SQL转换为大写
-
-        //2、删除所有注释，降低分析难度，提高准确性
-        //2.1 先去掉--的单行注释
-        Matcher mc = ToolHelper.getMatcher(sSqlNew, StaticConstants.remarkPatterSingle2Reduce);//Pattern：explanatory note
-        //Pattern regex;
-        while (mc.find())
-        {
-            sSqlNew = sSqlNew.replace(mc.group(), "");//删除所有注释
-        }
-        //2.2 先去掉/***\/的多行注释：因为多行注释不好用正则匹配，所以其就要像左右括号一样，单独分析匹配
-        sSql = removeMultiLineRemark(sSql);
-
-        mc = ToolHelper.getMatcher(sSqlNew, keyPattern);
+        //条件键优化
+        Map<String, Object> dicNew = conditionKeyOptimize(dic);
+        //1、移除所有注释
+        String sSqlNew = RemoveSqlRemark(sSql, dicNew);
+        //2、获取SQL中的#参数#
+        Matcher mc = ToolHelper.getMatcher(sSqlNew, keyPatternHash);
         while (mc.find())
         {
             String sParamName = ToolHelper.getKeyName(mc.group(), myPeachProp);
-            SqlKeyValueEntity param = SqlKeyValueEntity.build(mc.group(), new HashMap<String, Object>(), myPeachProp);
+            SqlKeyValueEntity param = SqlKeyValueEntity.build(mc.group(), new HashMap<>(), myPeachProp);
             if (!dicReturn.containsKey(sParamName))
             {
                 dicReturn.put(sParamName,param);
             }
         }
         return dicReturn;
+    }
+
+    /// <summary>
+    /// 条件键优化
+    /// </summary>
+    /// <param name="dic"></param>
+    /// <returns></returns>
+    private static Map<String, Object> conditionKeyOptimize(Map<String, Object> dic)
+    {
+        //1、对传入的条件集合中的KEY进行优化：如去掉#号，如有：分隔，那么取第一个值作为键
+        Map<String, Object> dicNew = new HashMap<String, Object>();
+        for (String key:dic.keySet())
+        {
+            String sKeyNew = key.replace("#", "").replace("{", "").replace("}", "");
+            sKeyNew = sKeyNew.split(":")[0];
+            dicNew.put(sKeyNew, dic.get(key));
+        }
+        return dicNew;
+    }
+
+    /// <summary>
+    /// 获取所有参数键
+    /// </summary>
+    /// <param name="sSql"></param>
+    /// <param name="dicNew"></param>
+    private void getAllParamKey(String sSql, Map<String, Object> dicNew)
+    {
+        Matcher mc = ToolHelper.getMatcher(sSql, keyPatternHash);
+        while (mc.find())
+        {
+            String sParamName = ToolHelper.getKeyName(mc.group(), myPeachProp);
+            SqlKeyValueEntity param = SqlKeyValueEntity.build(mc.group(), dicNew, myPeachProp);
+
+            if (!mapSqlKey.containsKey(sParamName))
+            {
+                mapSqlKey.put(sParamName, param);//参数不存在，直接添加
+            }
+            else
+            {
+                if (param.getKeyMoreInfo().isFirst())
+                {
+                    mapSqlKey.put(sParamName,param); //如是优先配置，那么替换原存在的配置对象
+                }
+            }
+
+            if (!mapSqlKeyValid.containsKey(sParamName) && param.isHasValue())
+            {
+                mapSqlKeyValid.put(sParamName, param);//有传值的键
+                mapObject.put(sParamName, param.getKeyValue());
+                mapString.put(sParamName,param.getKeyValue().toString());
+            }
+            if (!param.isHasValue() && param.getKeyMoreInfo().isMust())
+            {
+                mapError.put(sParamName, sParamName + "参数非空，但未传值！");//非空参数空值报错
+            }
+
+            if (ToolHelper.IsNotNull(param.getErrorMessage()))
+            {
+                mapError.put(sParamName, param.getErrorMessage());//错误列表
+            }
+
+            if (param.getKeyMoreInfo().isMustValueReplace())
+            {
+                mapReplaceOrInCondition.put(sParamName, sParamName); //要被替换或IN清单的条件键
+            }
+
+            //位置参数的条件值数组
+            if (param.isHasValue() && !param.getKeyMoreInfo().isMustValueReplace())
+            {
+                positionParamConditonList.add(param.getKeyValue());
+            }
+        }
+    }
+
+    /// <summary>
+    /// SQL预优化
+    /// </summary>
+    /// <param name="sSql"></param>
+    /// <returns></returns>
+    private String sqlPreOptimize(String sSql)
+    {
+        //去掉前后空格
+        String sNoConditionSql = sSql;
+        //将#{}的参数，转换为##形式，方便后面统一处理
+        Matcher mc = ToolHelper.getMatcher(sNoConditionSql, keyPatternHashLeftBrace);
+        while (mc.find())
+        {
+            String sNewParam = mc.group().replace("#", "").replace("{", "").replace("}", "");
+            if (sNewParam.indexOf("'")>-1)
+            {
+                sNewParam = "'" + StaticConstants.HASH + mc.group().replace("#", "").replace("{", "").replace("}", "").replace("'", "") + StaticConstants.HASH+"'";
+            }
+            else
+            {
+                sNewParam = StaticConstants.HASH + mc.group().replace("#", "").replace("{", "").replace("}", "").replace("'", "") + StaticConstants.HASH;
+            }
+            sSql = sSql.replace(mc.group(), sNewParam);
+        }
+        return sSql;
+    }
+
+
+    /// <summary>
+    /// 移除SQL注释方法
+    /// </summary>
+    /// <param name="sSql"></param>
+    public String RemoveSqlRemark(String sSql,Map<String, Object> dic)
+    {
+        //1、预处理
+        //1.1 去掉前后空字符：注这里不要转换为大写，因为有些条件里有字母值，如转换为大写，则会使条件失效！！
+        sSql = sSql.trim(); //.toUpperCase();//将SQL转换为大写
+
+        //1.2 将参数中的#{}，转换为##，方便后续统一处理
+        sSql = sqlPreOptimize(sSql);
+
+        //2、删除所有注释，降低分析难度，提高准确性
+        //2.1 先去掉--的单行注释
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.remarkPatterSingle2Reduce);//Pattern：explanatory note
+        while (mc.find())
+        {
+            sSql = sSql.replace(mc.group(), "");//删除所有注释
+        }
+
+        //2.2 先去掉/***\/的多行注释：因为多行注释不好用正则匹配，所以其就要像左右括号一样，单独分析匹配
+        sSql = removeMultiLineRemark(sSql, dic);
+        //参数#改为*后的SQL
+        String sNoConditionSql = sSql;
+        mc = ToolHelper.getMatcher(sSql, keyPatternHash);
+        while (mc.find())
+        {
+            //先将#号替换为*，防止跟原注释冲突。注：字符数量还是跟原SQL一样！
+            String sNewParam = mc.group().replace("#", "*");
+            sNoConditionSql = sNoConditionSql.replace(mc.group(), sNewParam); //将参数替换为新字符
+        }
+
+        //2.3、移除#开头的单行注释
+        mc = ToolHelper.getMatcher(sNoConditionSql, StaticConstants.remarkPatterSingleHash);
+        StringBuilder sbNoRemark = new StringBuilder();
+        int iGroupStart = 0;//组开始的位置
+        boolean isHasHashRemark = false;
+        while (mc.find())
+        {
+            sbNoRemark.append(sSql.substring(iGroupStart, mc.start()));
+            iGroupStart = mc.end();
+            isHasHashRemark = true;
+        }
+        if (iGroupStart > 0)
+        {
+            sbNoRemark.append(sSql.substring(iGroupStart)); //最后的字符
+        }
+        if (isHasHashRemark)
+        {
+            sSql = sbNoRemark.toString();
+        }
+        return sSql;
     }
 
     /**
@@ -156,145 +310,69 @@ public abstract class AbstractSqlParser {
      * @return 返回转换结果
      */
     public ParserResult parse(String sSql, Map<String, Object> dic){
-        //1、预处理：去掉前后空字符：注这里不要转换为大写，因为有些条件里有字母值，如转换为大写，则会使条件失效！！
-        sSql = sSql.trim(); //.toUpperCase();//将SQL转换为大写
-        Matcher mc;
-        //0.读取注释中的动态SQL：未完成
-//        String sDynSql = "";
-//        mc = ToolHelper.getMatcher(sSql, StaticConstants.dynamicSqlPattern);//Pattern：explanatory note
-//        Pattern regex;
-//        int i=1;
-//        int iLastBegin=0;
-//        int iLastEnd=0;
-//        while (mc.find()) {
-//            sDynSql = mc.group();
-//            if(i%2==0){
-//                dynamicString.put(sDynSql,sSql.substring(mc.start(),mc.end()));
-//                sSql = sSql.substring(0,iLastBegin)+ sDynSql + sSql.substring(0,mc.end());//读取后面的
-//            }
-//            iLastBegin=mc.start();
-//            iLastEnd = mc.end();
-//            i++;
-//        }
+        //1、 条件键优化
+        Map<String, Object> dicNew = conditionKeyOptimize(dic);
 
-        //2、删除所有注释，降低分析难度，提高准确性
-        //2.1 先去掉--的单行注释
-        mc = ToolHelper.getMatcher(sSql, StaticConstants.remarkPatterSingle2Reduce);//Pattern：explanatory note
-        while (mc.find()) {
-            sSql = sSql.replace(mc.group(),"").trim();//删除所有注释
-        }
-        //2.2 先去掉/***\/的多行注释：因为多行注释不好用正则匹配，所以其就要像左右括号一样，单独分析匹配
-        sSql = removeMultiLineRemark(sSql);
+        //2、移除所有注释
+        sSql = RemoveSqlRemark(sSql, dicNew);
 
-        //3、条件参数处理
-        //3。1、对传入的条件集合中的KEY进行优化：如去掉#号，如有：分隔，那么取第一个值作为键
-        Map<String, Object> dicNew = new HashMap<>();
-        for (String key:dic.keySet()) {
-            String sKeyNew = key.replace("#","").replace("{","").replace("}","");
-            sKeyNew = sKeyNew.split(":")[0];
-            dicNew.put(sKeyNew,dic.get(key));
-        }
+        //3、获取SQL所有参数信息
+        getAllParamKey(sSql, dicNew);
 
-        //3.2、获取SQL所有参数信息
-        String sNoConditionSql = sSql;
-        mc = ToolHelper.getMatcher(sSql, keyPattern);
-        while (mc.find()) {
-            //先将#号替换为*，防止跟原注释冲突。注：字符数量还是跟原SQL一样！
-            String sNewParam = mc.group().replace('#','*');
-            sNoConditionSql = sNoConditionSql.replace(mc.group(),sNewParam); //将参数替换为新字符
-            String sParamName = ToolHelper.getKeyName(mc.group(), myPeachProp);
-            SqlKeyValueEntity param = SqlKeyValueEntity.build(mc.group(), dicNew, myPeachProp);
-
-            if(!mapSqlKey.containsKey(sParamName)){
-                mapSqlKey.put(sParamName,param); //参数不存在，直接添加
-            } else {
-                if (param.getKeyMoreInfo().isFirst()) {
-                    mapSqlKey.replace(sParamName,param); //如是优先配置，那么替换原存在的配置对象
-                }
-            }
-
-            if(param.isHasValue()){
-                mapSqlKeyValid.put(sParamName,param);//有传值的键
-                mapObject.put(sParamName,param.getKeyValue());
-                mapString.put(sParamName,String.valueOf(param.getKeyValue()));
-                if (param.getKeyMoreInfo().isMustValueReplace())
-                {
-                    mapReplaceOrInCondition.put(sParamName, sParamName); //要被替换或IN清单的条件键
-                }
-            }else{
-                if(param.getKeyMoreInfo().isMust()){
-                    mapError.put(sParamName,sParamName + "参数非空，但未传值！");
-                }
-            }
-            if(ToolHelper.IsNotNull(param.getErrorMessage())){
-                mapError.put(sParamName,param.getErrorMessage());//错误列表
-            }
-            //位置参数的条件值数组
-            if(param.isHasValue() && !param.getKeyMoreInfo().isMustValueReplace()) {
-                positionParamConditonList.add(param.getKeyValue());
-            }
-        }
-        //3.3、当传入参数不符合，则直接返回退出
+        //3.1、当传入参数不符合，则直接返回退出
         ParserResult result;
-        if(mapSqlKey.size()==0){
-            result = ParserResult.success(sSql,mapSqlKey,mapObject,mapString, positionParamConditonList);
-            result.setMessage("SQL中没有发现键(键配置样式为："+keyPrefix +"key"+ keySuffix+")，已直接返回原SQL！");
+        if (mapSqlKey.size() == 0)
+        {
+            result = ParserResult.success(sSql, mapSqlKey, mapObject, mapString, positionParamConditonList);
+
+            result.setMessage("SQL中没有发现键(键配置样式为：" + StaticConstants.HASH + "key" + StaticConstants.HASH + "或"
+                    + StaticConstants.HASH_LEFT_BRACE + "key" + StaticConstants.RIGHT_BRACE + ")，已直接返回原SQL！");
             return result;
         }
-        if(mapError.size()>0){
-            return ParserResult.fail("部分非空键（"+String.join(",",mapError.keySet())+"）没有传入值，已退出！",mapError);
+
+        if (mapError.size() > 0)
+        {
+            return ParserResult.fail("部分非空键（" + String.join(",", mapError.keySet()) + "）没有传入值，已退出！", mapError);
         }
 
-        //4、移除#开头的单行注释
-        mc = ToolHelper.getMatcher(sNoConditionSql, StaticConstants.remarkPatterSingleHash);
-        StringBuilder sbNoRemark = new StringBuilder();
-        int iGroupStart = 0;//组开始的位置
-        boolean isHasHashRemark = false;
-        while (mc.find()) {
-            sbNoRemark.append(sSql.substring(iGroupStart,mc.start()));
-            iGroupStart = mc.end();
-            isHasHashRemark = true;
-        }
-        if(iGroupStart>0){
-            sbNoRemark.append(sSql.substring(iGroupStart)); //最后的字符
-        }
-        if(isHasHashRemark){
-            sSql = sbNoRemark.toString();
-        }
-
-        //5、得到符合左右括号正则式的内容，并替换为类似：##序号##格式，方便先从大方面分析结构，之后再取出括号里的内容来进一步分析
+        //4、得到符合左右括号正则式的内容，并替换为类似：##序号##格式，方便先从大方面分析结构，之后再取出括号里的内容来进一步分析
         String sNewSql = generateParenthesesKey(sSql);
-        if(ToolHelper.IsNotNull(sNewSql)){
+        if (ToolHelper.IsNotNull(sNewSql))
+        {
             sSql = sNewSql;
         }
 
-        //6、转换处理：边拆边处理
+        //5、转换处理：边拆边处理
         String sFinalSql = headSqlConvert(sSql);
+
         //在处理过程中，也会往mapError写入错误信息，所以这里如有错误，也返回出错信息
-        if(mapError.size()>0){
-            return ParserResult.fail("部分非空键没有传入值或其他错误，关联信息："+String.join(",",mapError.keySet())+"，已退出！",mapError);
+        if (mapError.size() > 0)
+        {
+            return ParserResult.fail("部分非空键没有传入值或其他错误，关联信息：" + String.join(",", mapError.keySet()) + "，已退出！", mapError);
+        }
+        //6、返回最终结果
+        if (sFinalSql.isEmpty())
+        {
+            return ParserResult.fail("转换失败，原因不明。", mapError);
         }
 
-        //7、返回最终结果
-        if(sFinalSql.isEmpty()){
-            return ParserResult.fail("转换失败，原因不明。",mapError);
-        }
-
-        //8、针对值替换以及IN清单，要从条件中移除，防止参数化报错
-        for (String sKey:mapReplaceOrInCondition.keySet())
+        //6.1、针对值替换以及IN清单，要从条件中移除，防止参数化报错
+        for (String sKey: mapReplaceOrInCondition.keySet())
         {
             mapSqlKeyValid.remove(sKey);
             mapObject.remove(sKey);
             mapString.remove(sKey);
         }
-        //转换成功
-        result = ParserResult.success(sFinalSql, mapSqlKeyValid,mapObject,mapString, positionParamConditonList);
+
+        result = ParserResult.success(sFinalSql, mapSqlKeyValid, mapObject, mapString, positionParamConditonList);
         result.setSql(sFinalSql);
         result.setEntityQuery(mapSqlKeyValid);
-
-        if(myPeachProp.isShowDebugSql()){
+        //6.2、输出SQL到控制台
+        if (myPeachProp.isShowDebugSql())
+        {
             System.out.println(sFinalSql);
         }
+        //6.3、如有设置SQL输出路径，那么也记录SQL到日志文件中。
         String sPath = myPeachProp.getLogSqlPath();
         if(!sPath.isEmpty()){
             Calendar calendar= Calendar.getInstance();
@@ -351,7 +429,7 @@ public abstract class AbstractSqlParser {
      * @param sSql
      * @return
      */
-    protected String removeMultiLineRemark(String sSql) {
+    protected String removeMultiLineRemark(String sSql, Map<String, Object> dic) {
         Matcher mc;
         StringBuilder sb = new StringBuilder();
         mc = ToolHelper.getMatcher(sSql, StaticConstants.remarkPatterMultiLine);
@@ -360,31 +438,222 @@ public abstract class AbstractSqlParser {
         int iRight = 0;//右注释数
         int iGroupStart = 0;//组开始的位置
 
-        while (mc.find()) {
-            if("/*".equals(mc.group())){
+        int iRemarkBegin = 0;//注释开始的地方
+        String sOneRemarkSql = "";
+
+        //增加动态SQl语句的处理
+
+        while (mc.find())
+        {
+            if ("/*".equals(mc.group()))
+            {
                 iLeft++;
-                if(iLeft==1){
-                    sb.append(sSql.substring(iGroupStart,mc.start()));//注：不要包括左括号
+                if (iLeft == 1)
+                {
+                    String sNowStr = sSql.substring(iGroupStart, mc.start());
+                    if (!sNowStr.isEmpty())
+                    {
+                        sb.append(sNowStr);//注：不要包括左括号
+                    }
                     iGroupStart = mc.end();
+                    iRemarkBegin=mc.start();
                 }
-            }else{
+            }
+            else
+            {
                 iRight++;
             }
             //判断是否是一组数据
-            if(iLeft == iRight){
+            if (iLeft == iRight)
+            {
                 iGroupStart = mc.end();//下一个语句的开始
-                //iGroup++;
+                sOneRemarkSql = sSql.substring(iRemarkBegin, iGroupStart).trim();
+                int iLen = SqlKeyConfig.dynamicSqlRemarkFlagString.length();
+                int iStart = sOneRemarkSql.indexOf(SqlKeyConfig.dynamicSqlRemarkFlagString);
+                int iEnd = sOneRemarkSql.lastIndexOf(SqlKeyConfig.dynamicSqlRemarkFlagString);
+                if (iStart > -1 && iEnd>-1)
+                {
+                    //包含动态SQL标志
+                    sOneRemarkSql = sOneRemarkSql.substring(iStart+ iLen, iEnd).trim();
+                    sOneRemarkSql = getDynamicSql(dic, sOneRemarkSql);
+                    sb.append(sOneRemarkSql.trim());//加入动态部分的SQL
+                }
+
                 iLeft = 0;
                 iRight = 0;
             }
         }
-        //有注释时，还要处理最后的字符
-        if(iGroupStart>0){
-            sb.append(sSql.substring(iGroupStart));
+        //最后的字符
+        if (iGroupStart > 0)
+        {
+            sb.append(sSql.substring(iGroupStart).trim());
             return sb.toString().trim();
         }
         //没有注释时，直接返回原SQL
         return sSql;
+
+//        Matcher mc;
+//        StringBuilder sb = new StringBuilder();
+//        mc = ToolHelper.getMatcher(sSql, StaticConstants.remarkPatterMultiLine);
+//        //int iGroup = 0;//第几组括号
+//        int iLeft = 0;//左注释数
+//        int iRight = 0;//右注释数
+//        int iGroupStart = 0;//组开始的位置
+//
+//        while (mc.find()) {
+//            if("/*".equals(mc.group())){
+//                iLeft++;
+//                if(iLeft==1){
+//                    sb.append(sSql.substring(iGroupStart,mc.start()));//注：不要包括左括号
+//                    iGroupStart = mc.end();
+//                }
+//            }else{
+//                iRight++;
+//            }
+//            //判断是否是一组数据
+//            if(iLeft == iRight){
+//                iGroupStart = mc.end();//下一个语句的开始
+//                //iGroup++;
+//                iLeft = 0;
+//                iRight = 0;
+//            }
+//        }
+//        //有注释时，还要处理最后的字符
+//        if(iGroupStart>0){
+//            sb.append(sSql.substring(iGroupStart));
+//            return sb.toString().trim();
+//        }
+//        //没有注释时，直接返回原SQL
+//        return sSql;
+    }
+
+    /// <summary>
+    /// 获取动态SQL
+    /// </summary>
+    /// <param name="dic"></param>
+    /// <param name="sOneRemarkSql"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    private String getDynamicSql(Map<String, Object> dic, String sOneRemarkSql)
+    {
+        try
+        {
+            String[] dnyArr = sOneRemarkSql.split("&" );
+            if (dnyArr.length == 2)
+            {
+                String sCond = dnyArr[0].trim();
+                int iLen = 2;
+                int iFinStart = sCond.indexOf("{[");
+                int iFinEnd = sCond.indexOf("]}");
+                sCond = sCond.substring(iFinStart, iFinEnd);
+
+                //
+                String sDynSql = dnyArr[1].trim();
+                sDynSql = sDynSql.substring(sDynSql.indexOf("{[")+ iLen, sDynSql.indexOf("]}"));
+                String sOperateStr = "";
+                if (sCond.indexOf(">=") > 0)
+                {
+                    //大于等于：使用整型比较
+                    sOperateStr = ">=";
+                    iFinStart = sCond.indexOf(sOperateStr);
+                    String sKey = sCond.substring(iLen, iFinStart);
+                    String sValue = sCond.substring(iFinStart + sOperateStr.length());
+                    if (dic.containsKey(sKey))
+                    {
+                        Integer iCondValue = Integer.parseInt(dic.get(sKey).toString());
+                        Integer iSqlValue = Integer.parseInt(sValue);
+                        return (iCondValue.compareTo(iSqlValue) >= 0) ? sDynSql : "";
+                    }
+                }
+                else if (sCond.indexOf("<=") > 0)
+                {
+                    //小于等于：使用整型比较
+                    sOperateStr = "<=";
+                    iFinStart = sCond.indexOf(sOperateStr);
+                    String sKey = sCond.substring(iLen, iFinStart);
+                    String sValue = sCond.substring(iFinStart + sOperateStr.length());
+                    if (dic.containsKey(sKey))
+                    {
+                        Integer iCondValue = Integer.parseInt(dic.get(sKey).toString());
+                        Integer iSqlValue = Integer.parseInt(sValue);
+                        return (iCondValue.compareTo(iSqlValue) <= 0) ? sDynSql : "";
+                    }
+                }
+                else if (sCond.indexOf("<") > 0)
+                {
+                    //小于：使用整型比较
+                    sOperateStr = "<";
+                    iFinStart = sCond.indexOf(sOperateStr);
+                    String sKey = sCond.substring(iLen, iFinStart);
+                    String sValue = sCond.substring(iFinStart + sOperateStr.length());
+                    if (dic.containsKey(sKey))
+                    {
+                        Integer iCondValue = Integer.parseInt(dic.get(sKey).toString());
+                        Integer iSqlValue = Integer.parseInt(sValue);
+                        return (iCondValue.compareTo(iSqlValue) < 0) ? sDynSql : "";
+                    }
+                }
+                else if (sCond.indexOf(">") > 0)
+                {
+                    //大于：使用整型比较
+                    sOperateStr = ">";
+                    iFinStart = sCond.indexOf(sOperateStr);
+                    String sKey = sCond.substring(iLen, iFinStart);
+                    String sValue = sCond.substring(iFinStart + sOperateStr.length());
+                    if (dic.containsKey(sKey))
+                    {
+                        Integer iCondValue = Integer.parseInt(dic.get(sKey).toString());
+                        Integer iSqlValue = Integer.parseInt(sValue);
+                        return (iCondValue.compareTo(iSqlValue) > 0) ? sDynSql : "";
+                    }
+                }
+                else if (sCond.indexOf("=") > 0)
+                {
+                    //等于：使用字符比较
+                    sOperateStr = "=";
+                    iFinStart = sCond.indexOf(sOperateStr);
+                    String sKey = sCond.substring(iLen, iFinStart);
+                    String sValue = sCond.substring(iFinStart + sOperateStr.length());
+                    if (dic.containsKey(sKey))
+                    {
+                        return sValue.equals(dic.get(sKey).toString()) ? sDynSql : "";
+                    }
+                }
+                else if (sCond.indexOf("!=") > 0)
+                {
+                    //不等于：使用字符比较
+                    sOperateStr = "!=";
+                    iFinStart = sCond.indexOf(sOperateStr);
+                    String sKey = sCond.substring(iLen, iFinStart);
+                    String sValue = sCond.substring(iFinStart + sOperateStr.length());
+                    if (dic.containsKey(sKey))
+                    {
+                        return sValue.equals(dic.get(sKey).toString()) ? "" : sDynSql;
+                    }
+                }
+                else if (sCond.indexOf("<>") > 0)
+                {
+                    //不等于：使用字符比较
+                    sOperateStr = "<>";
+                    iFinStart = sCond.indexOf(sOperateStr);
+                    String sKey = sCond.substring(iLen, iFinStart);
+                    String sValue = sCond.substring(iFinStart + sOperateStr.length());
+                    if (dic.containsKey(sKey))
+                    {
+                        return sValue.equals(dic.get(sKey).toString()) ? "" : sDynSql;
+                    }
+                }
+                else
+                {
+                    throw new Exception("不支持的动态SQl操作符，只能使用>=、>、<=、<、=、！=、<>这几种单值比较符！原始字符：" + sCond);
+                }
+            }
+            throw new Exception("动态SQl配置错误！！" );
+        }
+        catch(Exception e)
+        {
+            return "";
+        }
     }
 
     /**
@@ -743,7 +1012,7 @@ public abstract class AbstractSqlParser {
 
             //判断是否所有键为空
             Boolean allKeyNull = true;
-            Matcher mc1 = ToolHelper.getMatcher(sSource, keyPattern);
+            Matcher mc1 = ToolHelper.getMatcher(sSource, keyPatternHash);
             while (mc1.find()) {
                 if (ToolHelper.IsNotNull(singleKeyConvert(mc1.group()))) {
                     allKeyNull = false;
@@ -811,7 +1080,7 @@ public abstract class AbstractSqlParser {
         //1、剔除开头的一个或多个左括号，并且把这些左括号记录到变量中，方便后面拼接
         String sOne = sSql;
         String sStartsParentheses="";
-        while (sOne.startsWith("(")){ //remvoe the start position of string "("
+        while (sOne.startsWith("(")){ //remvoe the start position of String "("
             sStartsParentheses += "(";
             sOne = sOne.substring(1).trim();
         }
@@ -905,7 +1174,7 @@ public abstract class AbstractSqlParser {
      * @return
      */
     protected String singleKeyConvert(String sSql){
-        Matcher mc = ToolHelper.getMatcher(sSql, keyPattern);
+        Matcher mc = ToolHelper.getMatcher(sSql, keyPatternHash);
         while (mc.find()){
             String sKey = ToolHelper.getKeyName(mc.group(), myPeachProp);
             if(!mapSqlKeyValid.containsKey(sKey)){
@@ -936,7 +1205,7 @@ public abstract class AbstractSqlParser {
      * @return 例如：'%#CITY_NAME#%'
      */
     protected String getFirstKeyString(String sSql){
-        Matcher mc = ToolHelper.getMatcher(sSql, keyPattern);
+        Matcher mc = ToolHelper.getMatcher(sSql, keyPatternHash);
         if (mc.find()) {
             return mc.group();
         }else {
@@ -960,7 +1229,7 @@ public abstract class AbstractSqlParser {
      * @return
      */
     protected boolean hasKey(String sSql){
-        Matcher mc = ToolHelper.getMatcher(sSql, keyPattern);
+        Matcher mc = ToolHelper.getMatcher(sSql, keyPatternHash);
         boolean hasPara = false;
         while (mc.find()) {
             hasPara = true;
@@ -1026,6 +1295,84 @@ public abstract class AbstractSqlParser {
         return sb.toString();
     }
 
+    protected String dealUpdateSetItem(String sSql)
+    {
+        StringBuilder sb = new StringBuilder();
+        String[] sSetArray = sSql.split(",");
+        String sComma = "";
+        for (String col:sSetArray)
+        {
+            if (!hasKey(col))
+            {
+                sb.append(sComma + col);
+                sComma = ",";
+                continue;
+            }
+
+            sb.append(complexParenthesesKeyConvert(sComma + col, ""));
+
+            if (sComma.isEmpty())
+            {
+                String sKey = getFirstKeyName(col);
+                if (mapSqlKeyValid.containsKey(sKey))
+                {
+                    sComma = ",";
+                }
+            }
+        }
+        return sb.toString();
+    }
+
+    protected String dealInsertItemAndValue(String sSql, StringBuilder sbHead, StringBuilder sbTail)
+    {
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.valuesPattern);//先根据VALUES关键字将字符分隔为两部分
+        if (!mc.find())
+        {
+            return sSql;
+        }
+        String sInsert = "";
+        String sPara = "";
+
+        String sInsertKey = sSql.substring(0, mc.start()).trim();
+        String sParaKey = sSql.substring(mc.end()).trim();
+
+        sInsert = ToolHelper.removeBeginEndParentheses(mapsParentheses.get(sInsertKey));
+        sPara = ToolHelper.removeBeginEndParentheses(mapsParentheses.get(sParaKey));
+        sPara = generateParenthesesKey(sPara);//针对有括号的部分先替换为##序号##
+
+        sbHead.append("(");//加入(
+        sbTail.append(mc.group() + "(");//加入VALUES(
+
+        //3、 insert into ... values形式
+        String[] colArray = sInsert.split(",");
+        String[] paramArray = sPara.split(",");
+
+        int iGood = 0;
+        for (int i = 0; i < colArray.length; i++)
+        {
+            String sOneParam = paramArray[i];
+            String sParamSql = complexParenthesesKeyConvert(sOneParam, "");
+            if (ToolHelper.IsNotNull(sParamSql))
+            {
+                if (iGood == 0)
+                {
+                    sbHead.append(colArray[i]);
+                    sbTail.append(sParamSql);
+                }
+                else
+                {
+                    sbHead.append("," + colArray[i]);
+                    sbTail.append("," + sParamSql);
+                }
+                iGood++;
+            }
+        }
+        sbHead.append(")");
+        sbTail.append(")");
+        sSql = "";//处理完毕清空SQL
+        return sSql;
+    }
+
     /**
      * 头部SQL转换：子类实现
      * @param sSql
@@ -1038,4 +1385,9 @@ public abstract class AbstractSqlParser {
      */
     protected abstract String beforeFromConvert(String sSql);
 
+    /**
+     * 是否正确SQL类型抽象方法
+     * @param sSql
+     */
+    public abstract boolean isRightSqlType(String sSql);
 }

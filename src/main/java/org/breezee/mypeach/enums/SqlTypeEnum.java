@@ -40,6 +40,14 @@ public enum SqlTypeEnum {
     /**
      * 删除语句
      */
-    DELETE
+    DELETE,
+    /**
+     * 通用语句-MERGE
+     */
+    CommonMerge,
+    /**
+     *未知语句
+     */
+    Unknown
 
 }

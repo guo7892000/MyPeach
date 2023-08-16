@@ -9,6 +9,7 @@ package org.breezee.mypeach.config;
  * @date: 2022/4/12 16:45
  * @history:
  *   2023/08/04 BreezeeHui 修改remarkPatter正则式，对/**\/中间应该可以包括换行符
+ *   2023/08/14 BreezeeHui 增加MERGE INTO的正则式
  */
 public class StaticConstants {
     public static final String parenthesesRoundKey = "##";
@@ -105,8 +106,7 @@ public class StaticConstants {
     public static final String updateSetPattern = "^UPDATE\\s*\\S*\\s*SET\\s*";//正则式：UPDATE TABLE_NAME SET
     public static final String deletePattern = "^DELETE\\s+FROM\\s+\\S+\\s+"; //正则式:DELETE FROM TABALE_NAME
 
-    /**
-     * 注释中的动态SQL配置
-     */
-    public static final String dynamicSqlPattern = "\\s*/*\\**:*DYN:\\w+:\\w+:*\\**/*"; //匹配的正则式如:/**dyn:id:1:**/、/**:dyn:id:1**/、/*dyn:id:2:、:dyn:id:2*/
+    //MERGE INTO
+    public static final String mergePatternHead = "^MERGE\\s+(INTO\\s+)*(\\w+|[.\\[\\]`])+(\\s+AS\\s+\\w+)*\\s+USING\\s+"; //有些表名要加[]`.
+    public static final String mergePatternMatchOrNot = "WHEN\\s+(NOT\\s+)*MATCHED\\s+THEN\\s+";
 }

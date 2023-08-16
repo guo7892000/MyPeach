@@ -7,35 +7,39 @@ package org.breezee.mypeach.config;
  * @email: guo7892000@126.com
  * @wechat: BreezeeHui
  * @date: 2022/4/12 16:45
+ * @history:
+ *    2023/08/13 BreezeeHui 取消N的必填，只保留M。增加默认值Q和值不加引号的N配置项。
  */
 public class SqlKeyConfig {
     /**
-     * 键为非空值
+     * 键必填(Must)
      */
-    public static final String NOT_NULL = "N";
+    public static final String V_MUST = "M";
     /**
-     * 键是否必填
+     * 值替换(Replace)：不使用参数
      */
-    public static final String IS_MUST = "M";
+    public static final String V_REPLACE = "R";
     /**
-     * 必须值替换，不使用参数
-     */
-    public static final String VALUE_REPLACE = "R";
-    /**
-     * 字符串清单
+     * 字符串清单(List String)
      */
     public static final String STRING_LIST = "LS";
     /**
-     * 整型值清单
+     * 整型值清单(List Int)
      */
     public static final String INTEGE_LIST = "LI";
     /**
-     * 优先使用的配置：当同一个键出现多次时，会以F的配置为主
+     * 优先使用的配置(First)：当同一个键出现多次时，会以F的配置为主
      */
-    public static final String IS_FIRST = "F";
+    public static final String CFG_FIRST = "F";
     /**
-     * 动态SQL配置关键字：
-     * 使用场景如根据不同键值使用不同分组方式，在SQL中以注释方式做配置
+     * 默认值(Default value)：后面加-或&指定具体默认值
      */
-    public static final String DYNAMIC_SQL = "DYN";
+    public static final String V_DEFAULT = "D";
+    /**
+     * 值不加引号(No-Quotation mark )：默认都会加上，只有指定不加才不加
+     */
+    public static final String V_NO_QUOTATION_MARK = "N";
+
+    //动态SQL标志字符
+    public static final String dynamicSqlRemarkFlagString = "@MP&DYN";
 }

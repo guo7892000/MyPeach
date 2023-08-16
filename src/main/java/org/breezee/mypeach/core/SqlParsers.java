@@ -48,6 +48,8 @@ public class SqlParsers {
                 return new UpdateSqlParser(properties).parse(sSql,dic,paramTypeEnum);
             case DELETE:
                 return new DeleteSqlParser(properties).parse(sSql,dic,paramTypeEnum);
+            case CommonMerge:
+                return new CommonSqlParser(properties).parse(sSql, dic, paramTypeEnum);
             case SELECT:
             case SELECT_WITH_AS:
             default:
@@ -60,37 +62,48 @@ public class SqlParsers {
      * @param dic   SQL语句中键的值
      * @return 根据传入的动态条件转换为动态的SQL
      */
-    public ParserResult parse(String sSql, Map<String, Object> dic, TargetSqlParamTypeEnum paramTypeEnum)
+    public ParserResult parse(String sSql, Map<String, Object> dic, TargetSqlParamTypeEnum paramTypeEnum) throws Exception
     {
-        return GetParser(sSql).parse(sSql, dic, paramTypeEnum);
+        return GetParser(sSql,dic).parse(sSql, dic, paramTypeEnum);
     }
 
     public ParserResult parse(SqlTypeEnum sqlType, String sSql, Map<String, Object> dic){
         return parse(sqlType,sSql,dic,TargetSqlParamTypeEnum.NameParam);
     }
 
-    public Map<String, SqlKeyValueEntity> PreGetParam(String sSql)
+    public Map<String, SqlKeyValueEntity> PreGetParam(String sSql, Map<String, Object> dic) throws Exception
     {
-        return GetParser(sSql).PreGetParam(sSql);
+        return GetParser(sSql,dic).PreGetParam(sSql,dic);
     }
 
-    private AbstractSqlParser GetParser(String sSql)
-    {
-        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.insertIntoPattern);
-        if (mc.find())
+    private AbstractSqlParser GetParser(String sSql, Map<String, Object> dic) throws Exception {
+        AbstractSqlParser parser = new SelectSqlParser(properties);
+        sSql = parser.RemoveSqlRemark(sSql,dic);
+        //根据SQL的正则，再重新返回正确的SqlParser
+        if (parser.isRightSqlType(sSql))
         {
-            return new InsertSqlParser(properties);
+            return parser;
         }
-        mc = ToolHelper.getMatcher(sSql, StaticConstants.updateSetPattern);//先截取UPDATE SET部分
-        if (mc.find())
+        parser = new UpdateSqlParser(properties);
+        if (parser.isRightSqlType(sSql))
         {
-            return new UpdateSqlParser(properties);
+            return parser;
         }
-        mc = ToolHelper.getMatcher(sSql, StaticConstants.deletePattern);//抽取出INSERT INTO TABLE_NAME(部分
-        if (mc.find())
+        parser = new InsertSqlParser(properties);
+        if (parser.isRightSqlType(sSql))
         {
-            return new DeleteSqlParser(properties);
+            return parser;
         }
-        return new SelectSqlParser(properties);
+        parser = new DeleteSqlParser(properties);
+        if (parser.isRightSqlType(sSql))
+        {
+            return parser;
+        }
+        parser = new CommonSqlParser(properties);
+        if (parser.isRightSqlType(sSql))
+        {
+            return parser;
+        }
+        throw new Exception("不支持的SQL类型，请将SQL发给作者，后续版本增加支持！！");
     }
 }

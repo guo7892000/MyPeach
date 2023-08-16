@@ -228,6 +228,18 @@ public class SqlKeyValueEntity {
         }
 
         entity.setKeyMoreInfo(KeyMoreInfo.build(sParamNameMore,inValue));//设置更多信息对象
+        if (entity.getKeyMoreInfo().IsNoQuotationMark)
+        {
+            entity.setHasSingleQuotes(false); //重新根据配置来去掉引号
+        }
+        //值为空，且默认值不为空才赋值
+        if (inValue == null && entity.getKeyMoreInfo().DefaultValue!=null && !entity.getKeyMoreInfo().DefaultValue.isEmpty())
+        {
+            inValue= entity.getKeyMoreInfo().DefaultValue;//取默认值
+            if (entity.getKeyMoreInfo().IsDefaultValueNoQuotationMark) {
+                entity.setHasSingleQuotes(false);
+            }
+        }
 
         if(inValue!=null){
             entity.setKeyValue(inValue);

@@ -66,11 +66,13 @@ public class SelectSqlParser extends AbstractSqlParser {
     private String withSelectConvert(String sSql, StringBuilder sbHead) {
         Matcher mc = ToolHelper.getMatcher(sSql, withSelectPartn);
         int iStart = 0;
-        while (mc.find()) {
+        if(mc.find()) {
             sqlTypeEnum = SqlTypeEnum.SELECT_WITH_AS;
             String sOneSql = complexParenthesesKeyConvert(mc.group(),"");//##序号##处理
             sbHead.append(sOneSql);
             iStart = mc.end();
+        }else{
+            sqlTypeEnum = SqlTypeEnum.Unknown;
         }
         if(iStart>0) {
             sbHead.append(System.lineSeparator());
@@ -90,4 +92,24 @@ public class SelectSqlParser extends AbstractSqlParser {
         return queryBeforeFromConvert(sSql);
     }
 
+    /**
+     * 是否正确SQL类型实现方法
+     * @param sSql
+     * @return
+     */
+    @Override
+    public  boolean isRightSqlType(String sSql)
+    {
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.unionAllPartner);
+        if (mc.find())
+        {
+            return true;
+        }
+        mc = ToolHelper.getMatcher(sSql, withSelectPartn);
+        if (mc.find())
+        {
+            return true;
+        }
+        return false;
+    }
 }

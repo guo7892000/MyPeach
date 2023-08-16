@@ -1,0 +1,9 @@
+MERGE INTO credit.record_rule_data AS a
+USING tem1 AS b 
+ON a.rule_id =b.ruleName AND a.user_id ='#USER_ID#' AND a.auth_type =4
+WHEN MATCHED THEN UPDATE SET a.rule_value =b.ruleValue ,update_time=GETDATE()
+WHEN NOT MATCHED THEN
+INSERT
+(gid, create_time, update_time, data_version, user_id, auth_type, rule_id, rule_value)
+VALUES
+(NEWID(),GETDATE(),GETDATE(),'11','39917B36-9663-42E5-A9E8-7CEB875EDF5F','#AUTH_TYPE#',b.ruleName,b.ruleValue)

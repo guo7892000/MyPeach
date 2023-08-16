@@ -36,19 +36,7 @@ public class UpdateSqlParser extends AbstractSqlParser {
      */
     @Override
     public String headSqlConvert(String sSql) {
-        StringBuilder sb = new StringBuilder();
-        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.updateSetPattern);//先截取UPDATE SET部分
-        while (mc.find()){
-            sb.append(mc.group());//不变的UPDATE SET部分先加入
-            sSql = sSql.substring(mc.end()).trim();
-            String sFinalSql = fromWhereSqlConvert(sSql,false);//调用From方法
-            //如果禁用全表更新，并且条件为空，则抛错！
-            if(ToolHelper.IsNull(sFinalSql) && myPeachProp.isForbidAllTableUpdateOrDelete()){
-                mapError.put("出现全表更新，已停止","更新语句不能没有条件，那样会更新整张表数据！");//错误列表
-            }
-            sb.append(sFinalSql);
-        }
-        return sb.toString();
+        return dealUpdateSetItem(sSql);
     }
 
     /**
@@ -77,5 +65,17 @@ public class UpdateSqlParser extends AbstractSqlParser {
             }
         }
         return sb.toString();
+    }
+
+    /**
+     * 是否正确SQL类型实现方法
+     * @param sSql
+     * @return
+     */
+    @Override
+    public  boolean isRightSqlType(String sSql)
+    {
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.updateSetPattern);
+        return mc.find();
     }
 }

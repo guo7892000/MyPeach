@@ -35,7 +35,8 @@ public class DeleteSqlParser extends AbstractSqlParser {
     public String headSqlConvert(String sSql) {
         StringBuilder sb = new StringBuilder();
         Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.deletePattern);//抽取出INSERT INTO TABLE_NAME(部分
-        while (mc.find()){
+        if (mc.find()){
+            sqlTypeEnum = SqlTypeEnum.DELETE;
             sb.append(mc.group());//不变的INSERT INTO TABLE_NAME(部分先加入
             //FROM部分SQL处理
             String sWhereSql = fromWhereSqlConvert(sSql.substring(mc.end()),false);
@@ -44,6 +45,8 @@ public class DeleteSqlParser extends AbstractSqlParser {
                 mapError.put("出现全表删除，已停止","删除语句不能没有条件，那样会清除整张表数据！");//错误列表
             }
             sb.append(sWhereSql);
+        }else{
+            sqlTypeEnum = SqlTypeEnum.Unknown;
         }
         return sb.toString();
     }
@@ -58,4 +61,15 @@ public class DeleteSqlParser extends AbstractSqlParser {
         return "";
     }
 
+    /**
+     * 是否正确SQL类型实现方法
+     * @param sSql
+     * @return
+     */
+    @Override
+    public boolean isRightSqlType(String sSql)
+    {
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.deletePattern);//抽取出INSERT INTO TABLE_NAME(部分
+        return mc.find();
+    }
 }
