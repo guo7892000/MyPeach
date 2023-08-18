@@ -109,4 +109,12 @@ public class StaticConstants {
     //MERGE INTO
     public static final String mergePatternHead = "^MERGE\\s+(INTO\\s+)*(\\w+|[.\\[\\]`])+(\\s+AS\\s+\\w+)*\\s+USING\\s+"; //有些表名要加[]`.
     public static final String mergePatternMatchOrNot = "WHEN\\s+(NOT\\s+)*MATCHED\\s+THEN\\s+";
+
+    //动态参数的键前缀
+    public static final String dynConditionKeyPre = "@MP&DYN&KEY:";
+
+    //参数形式：'%#{NAME:D&getdate()-R-n}%'
+    public static final String keyPatternHashLeftBrace = "'?%?\\#\\{\\w+(:\\w+((-|&)(\\(|\\)|\\w)*)*)*\\}%?'?";//键正则式，注这里针对#{}都要加上转义符，否则会报错！！
+    //参数形式：'%#NAME:D&getdate()-R-n#%'
+    public static final String keyPatternHash = "'?%?\\#\\w+(:\\w+((-|&)(\\(|\\)|\\w)*)*)*\\#%?'?";//键正则式
 }

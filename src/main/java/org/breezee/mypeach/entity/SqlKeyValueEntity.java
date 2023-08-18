@@ -16,6 +16,7 @@ import java.util.Map;
  * @date: 2022/4/12 16:45
  * @history:
  *   2023/07/21 BreezeeHui 针对Like的前后模糊查询，其键值也相应增加%，以支持模糊查询
+ *   2023/08/18 BreezeeHui 参数前后缀只取#参数#；当条件不传值时，取默认值，根据默认值是否必须值替换来决定值必须值替换。
  */
 public class SqlKeyValueEntity {
     /**
@@ -205,12 +206,12 @@ public class SqlKeyValueEntity {
         entity.setKeyName(sParamName);
         entity.setParamString(prop.getParamPrefix()+sParamName+ prop.getParamSuffix());
 
-        String sParamNamePreSuffix;
-        if(prop.getKeyStyle()== SqlKeyStyleEnum.POUND_SIGN_BRACKETS){
-            sParamNamePreSuffix = StaticConstants.HASH_LEFT_BRACE + sParamName + StaticConstants.RIGHT_BRACE;
-        }else {
-            sParamNamePreSuffix = StaticConstants.HASH + sParamName + StaticConstants.HASH;
-        }
+        String sParamNamePreSuffix= StaticConstants.HASH + sParamName + StaticConstants.HASH;
+//        if(prop.getKeyStyle()== SqlKeyStyleEnum.POUND_SIGN_BRACKETS){
+//            sParamNamePreSuffix = StaticConstants.HASH_LEFT_BRACE + sParamName + StaticConstants.RIGHT_BRACE;
+//        }else {
+//            sParamNamePreSuffix = StaticConstants.HASH + sParamName + StaticConstants.HASH;
+//        }
 
         //取出传入条件中的值：对于字符串类型，会替换字符中的单引号
         Object inValue = null;
@@ -238,6 +239,9 @@ public class SqlKeyValueEntity {
             inValue= entity.getKeyMoreInfo().DefaultValue;//取默认值
             if (entity.getKeyMoreInfo().IsDefaultValueNoQuotationMark) {
                 entity.setHasSingleQuotes(false);
+            }
+            if (entity.getKeyMoreInfo().IsDefaultValueValueReplace) {
+                entity.getKeyMoreInfo().setMustValueReplace(true); //当没有传入值，且默认值为值替换时。当作是有传入默认值，且是替换
             }
         }
 

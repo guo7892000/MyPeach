@@ -42,12 +42,12 @@ public class ToolHelper {
      * @return
      */
     public static String getKeyNameMore(String sKeyString, MyPeachProperties prop){
-        String keyPrefix = "#";
-        String keySuffix = "#";
-        if(prop.getKeyStyle()== SqlKeyStyleEnum.POUND_SIGN_BRACKETS){
-            keyPrefix = StaticConstants.HASH_LEFT_BRACE;
-            keySuffix = StaticConstants.RIGHT_BRACE;
-        }
+        String keyPrefix = StaticConstants.HASH;
+        String keySuffix = StaticConstants.HASH;
+//        if(prop.getKeyStyle()== SqlKeyStyleEnum.POUND_SIGN_BRACKETS){
+//            keyPrefix = StaticConstants.HASH_LEFT_BRACE;
+//            keySuffix = StaticConstants.RIGHT_BRACE;
+//        }
         String sKeyNameMore = sKeyString.replace("'","").replace("%","")
                 .replace(keyPrefix,"").replace(keySuffix,"");
         return sKeyNameMore;//键中包含其他信息

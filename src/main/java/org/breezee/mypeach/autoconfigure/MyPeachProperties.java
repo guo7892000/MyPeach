@@ -11,13 +11,15 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @email: guo7892000@126.com
  * @wechat: BreezeeHui
  * @date: 2022/4/12 16:45
+ * @history:
+ *   2023/08/18 BreezeeHui 取消KeyStyle的设置，默认都支持#{参数}和#参数#两种方式，只是在处理过程中，会将#{}转换为#参数#后，再统一处理。
  */
 @ConfigurationProperties(prefix = "mypeach")
 public class MyPeachProperties {
     /**
      * SQL中键的样式枚举
      */
-    SqlKeyStyleEnum keyStyle = SqlKeyStyleEnum.POUND_SIGN_AROUND;
+    //SqlKeyStyleEnum keyStyle = SqlKeyStyleEnum.POUND_SIGN_AROUND;
     /**
      *名称：参数化的前缀（Sql param prefix）
      * 描述：在TargetSqlEnum为param时使用。
@@ -53,13 +55,13 @@ public class MyPeachProperties {
      */
     private String logSqlPath = "";
 
-    public SqlKeyStyleEnum getKeyStyle() {
-        return keyStyle;
-    }
-
-    public void setKeyStyle(SqlKeyStyleEnum keyStyle) {
-        this.keyStyle = keyStyle;
-    }
+//    public SqlKeyStyleEnum getKeyStyle() {
+//        return keyStyle;
+//    }
+//
+//    public void setKeyStyle(SqlKeyStyleEnum keyStyle) {
+//        this.keyStyle = keyStyle;
+//    }
 
     public String getParamPrefix() {
         return paramPrefix;
