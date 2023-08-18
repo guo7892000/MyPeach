@@ -207,11 +207,6 @@ public class SqlKeyValueEntity {
         entity.setParamString(prop.getParamPrefix()+sParamName+ prop.getParamSuffix());
 
         String sParamNamePreSuffix= StaticConstants.HASH + sParamName + StaticConstants.HASH;
-//        if(prop.getKeyStyle()== SqlKeyStyleEnum.POUND_SIGN_BRACKETS){
-//            sParamNamePreSuffix = StaticConstants.HASH_LEFT_BRACE + sParamName + StaticConstants.RIGHT_BRACE;
-//        }else {
-//            sParamNamePreSuffix = StaticConstants.HASH + sParamName + StaticConstants.HASH;
-//        }
 
         //取出传入条件中的值：对于字符串类型，会替换字符中的单引号
         Object inValue = null;
@@ -229,19 +224,19 @@ public class SqlKeyValueEntity {
         }
 
         entity.setKeyMoreInfo(KeyMoreInfo.build(sParamNameMore,inValue));//设置更多信息对象
-        if (entity.getKeyMoreInfo().IsNoQuotationMark)
-        {
+        if (entity.getKeyMoreInfo().IsNoQuotationMark) {
             entity.setHasSingleQuotes(false); //重新根据配置来去掉引号
         }
         //值为空，且默认值不为空才赋值
-        if (inValue == null && entity.getKeyMoreInfo().DefaultValue!=null && !entity.getKeyMoreInfo().DefaultValue.isEmpty())
-        {
-            inValue= entity.getKeyMoreInfo().DefaultValue;//取默认值
+        if (inValue == null && entity.getKeyMoreInfo().DefaultValue!=null && !entity.getKeyMoreInfo().DefaultValue.isEmpty()) {
             if (entity.getKeyMoreInfo().IsDefaultValueNoQuotationMark) {
                 entity.setHasSingleQuotes(false);
             }
             if (entity.getKeyMoreInfo().IsDefaultValueValueReplace) {
-                entity.getKeyMoreInfo().setMustValueReplace(true); //当没有传入值，且默认值为值替换时。当作是有传入默认值，且是替换
+                entity.getKeyMoreInfo().setMustValueReplace(true); //当没有传入值，且默认值为值替换时。当作是有传入默认值，且是值替换
+                inValue= entity.getKeyMoreInfo().DefaultValue.replace("'","");//取默认值。为防止SQL注入，去掉单引号
+            }else{
+                inValue= entity.getKeyMoreInfo().DefaultValue; //将作参数化，不需要替换掉引号
             }
         }
 
