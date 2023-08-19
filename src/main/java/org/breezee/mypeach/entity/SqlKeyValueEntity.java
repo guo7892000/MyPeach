@@ -185,7 +185,7 @@ public class SqlKeyValueEntity {
      * @param prop
      * @return
      */
-    public static SqlKeyValueEntity build(String sKeyString, Map<String,Object> dicQuery, MyPeachProperties prop){
+    public static SqlKeyValueEntity build(String sKeyString, Map<String,Object> dicQuery, MyPeachProperties prop, boolean isPreGetCondition){
         SqlKeyValueEntity entity = new SqlKeyValueEntity();
         entity.setKeyString(sKeyString);
         if(sKeyString.contains("'")){
@@ -227,8 +227,8 @@ public class SqlKeyValueEntity {
         if (entity.getKeyMoreInfo().IsNoQuotationMark) {
             entity.setHasSingleQuotes(false); //重新根据配置来去掉引号
         }
-        //值为空，且默认值不为空才赋值
-        if (inValue == null && entity.getKeyMoreInfo().DefaultValue!=null && !entity.getKeyMoreInfo().DefaultValue.isEmpty()) {
+        //使用默认值条件：条件传入值为空，非预获取参数，默认值不为空
+        if (inValue == null && !isPreGetCondition && entity.getKeyMoreInfo().DefaultValue!=null && !entity.getKeyMoreInfo().DefaultValue.isEmpty()) {
             if (entity.getKeyMoreInfo().IsDefaultValueNoQuotationMark) {
                 entity.setHasSingleQuotes(false);
             }
@@ -240,7 +240,11 @@ public class SqlKeyValueEntity {
             }
         }
 
-        if(inValue!=null){
+        if(inValue==null || inValue.toString().isEmpty()){
+            if(!entity.keyMoreInfo.nullable){
+                entity.setErrorMessage("键("+entity.getKeyName() + ")的值没有传入。");
+            }
+        }else {
             entity.setKeyValue(inValue);
             entity.setReplaceKeyWithValue(inValue);
             entity.setHasValue(true);
@@ -254,10 +258,6 @@ public class SqlKeyValueEntity {
             }
             if(entity.hasSingleQuotes){
                 entity.setReplaceKeyWithValue("'" + entity.getReplaceKeyWithValue() + "'");
-            }
-        }else {
-            if(!entity.keyMoreInfo.nullable){
-                entity.setErrorMessage("键("+entity.getKeyName() + ")的值没有传入。");
             }
         }
 
