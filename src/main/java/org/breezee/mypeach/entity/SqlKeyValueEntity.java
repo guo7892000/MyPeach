@@ -186,11 +186,12 @@ public class SqlKeyValueEntity {
      * @return
      */
     public static SqlKeyValueEntity build(String sKeyString, Map<String,Object> dicQuery, MyPeachProperties prop, boolean isPreGetCondition){
+        sKeyString = sKeyString.trim();
         SqlKeyValueEntity entity = new SqlKeyValueEntity();
         entity.setKeyString(sKeyString);
         if(sKeyString.contains("'")){
             entity.setHasSingleQuotes(true);
-            sKeyString = sKeyString.replace("'","");
+            sKeyString = sKeyString.replace("'","").trim();
         }
         if(sKeyString.startsWith("%")){
             entity.setHasLikePrefix(true);
@@ -234,9 +235,9 @@ public class SqlKeyValueEntity {
             }
             if (entity.getKeyMoreInfo().IsDefaultValueValueReplace) {
                 entity.getKeyMoreInfo().setMustValueReplace(true); //当没有传入值，且默认值为值替换时。当作是有传入默认值，且是值替换
-                inValue= entity.getKeyMoreInfo().DefaultValue.replace("'","");//取默认值。为防止SQL注入，去掉单引号
+                inValue= entity.getKeyMoreInfo().DefaultValue.replace("'","").trim();//取默认值。为防止SQL注入，去掉单引号
             }else{
-                inValue= entity.getKeyMoreInfo().DefaultValue; //将作参数化，不需要替换掉引号
+                inValue= entity.getKeyMoreInfo().DefaultValue.trim(); //将作参数化，不需要替换掉引号
             }
         }
 

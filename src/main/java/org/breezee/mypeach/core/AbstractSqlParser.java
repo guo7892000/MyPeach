@@ -4,7 +4,6 @@ import org.breezee.mypeach.autoconfigure.MyPeachProperties;
 import org.breezee.mypeach.config.StaticConstants;
 import org.breezee.mypeach.entity.ParserResult;
 import org.breezee.mypeach.entity.SqlKeyValueEntity;
-import org.breezee.mypeach.enums.SqlKeyStyleEnum;
 import org.breezee.mypeach.enums.SqlTypeEnum;
 import org.breezee.mypeach.enums.TargetSqlParamTypeEnum;
 import org.breezee.mypeach.utils.ToolHelper;
@@ -34,6 +33,7 @@ import java.util.regex.Matcher;
  *   2023/08/11 BreezeeHui 将移除注释抽成一个独立方法RemoveSqlRemark；增加SQL类型是否正确的抽象方法isRightSqlType。
  *   2023/08/18 BreezeeHui 针对注释中动态SQL的条件拼接，在预获取条件参数时，把动态SQL中的键也加进去！
  *   2023/08/19 BreezeeHui 只有在非预获取条件参数，且传入条件为空时，才把默认值赋给传入条件值！
+ *   2023/08/20 BreezeeHui 只有在非预获取条件参数，且传入条件为空时，才把默认值赋给传入条件值！
  */
 public abstract class AbstractSqlParser {
 
@@ -152,7 +152,7 @@ public abstract class AbstractSqlParser {
         for (String key:dic.keySet())
         {
             String sKeyNew = key.replace("#", "").replace("{", "").replace("}", "");
-            sKeyNew = sKeyNew.split(":")[0];
+            sKeyNew = sKeyNew.split(StaticConstants.keyBigTypeSpit)[0];
             dicNew.put(sKeyNew, dic.get(key));
         }
         return dicNew;
@@ -458,18 +458,18 @@ public abstract class AbstractSqlParser {
     private String getDynamicSql(Map<String, Object> dic, String sOneRemarkSql,boolean isPreGetCondition) {
         try
         {
-            Matcher mc = ToolHelper.getMatcher(sOneRemarkSql, StaticConstants.dynConditionSqlSegmentConfigPattern);
+            Matcher mc = ToolHelper.getMatcher(sOneRemarkSql, StaticConstants.dynSqlSegmentConfigPatternCenter);
             if (mc.find()) {
                 String sCond = sOneRemarkSql.substring(0,mc.start());
                 String sDynSql = sOneRemarkSql.substring(mc.end());
 
-                mc = ToolHelper.getMatcher(sCond, "\\s*\\{\\[\\s*");
+                mc = ToolHelper.getMatcher(sCond, StaticConstants.dynSqlSegmentConfigPatternLeft);
                 if (mc.find())
                 {
                     sCond = sCond.substring(mc.end()).trim();
                 }
 
-                mc = ToolHelper.getMatcher(sDynSql, "\\s*\\]\\}\\s*");
+                mc = ToolHelper.getMatcher(sDynSql, StaticConstants.dynSqlSegmentConfigPatternRight);
                 if (mc.find())
                 {
                     sDynSql = sDynSql.substring(0,mc.start()).trim();
@@ -477,6 +477,18 @@ public abstract class AbstractSqlParser {
 
                 int iFinStart = -1;
                 String sOperateStr = "";
+                //增加IN和NOT IN 支持
+                mc = ToolHelper.getMatcher(sCond, StaticConstants.notInPattern);
+                if (mc.find())
+                {
+                    return dynSqlSegmentInOrNotConditionEqual(dic, isPreGetCondition, mc, sCond, sDynSql,true);
+                }
+                mc = ToolHelper.getMatcher(sCond, StaticConstants.inPattern);
+                if (mc.find())
+                {
+                    return dynSqlSegmentInOrNotConditionEqual(dic, isPreGetCondition, mc, sCond, sDynSql, false);
+                }
+
                 if (sCond.indexOf(">=") > 0) {
                     //大于等于：使用整型比较
                     sOperateStr = ">=";
@@ -579,6 +591,35 @@ public abstract class AbstractSqlParser {
         catch(Exception e) {
             return "";
         }
+    }
+
+    /// <summary>
+    /// 动态SQL段的In或Not IN判断
+    /// </summary>
+    /// <param name="dic"></param>
+    /// <param name="isPreGetCondition"></param>
+    /// <param name="mc"></param>
+    /// <param name="sCond"></param>
+    /// <param name="sDynSql"></param>
+    /// <param name="isNotIn"></param>
+    /// <returns></returns>
+    private String dynSqlSegmentInOrNotConditionEqual(Map<String, Object> dic, boolean isPreGetCondition, Matcher mc, String sCond, String sDynSql,boolean isNotIn)
+    {
+        String sKey = sCond.substring(0, mc.start()).trim();
+        String sValue = sCond.substring(mc.end()).replace("(", "").replace(")", "").replace("'", "");
+        if (dic.containsKey(sKey)) {
+            String[] arrNotIn = sValue.split(",");
+            for (String item:arrNotIn) {
+                if (item.equals(dic.get(sKey).toString())) {
+                    return isNotIn ? "":sDynSql; //找到了：针对NOT IN返回空；针对IN返回动态SQL
+                }
+            }
+            return isNotIn ? sDynSql: ""; //没找到：针对NOT IN返回动态SQL；针对IN返回空
+        }
+        if (isPreGetCondition && !dic.containsKey(sKey)) {
+            dic.put(StaticConstants.dynConditionKeyPre + sKey, sValue);//加上前缀，是为了更好区分这是注释里的动态键
+        }
+        return "";
     }
 
     /**
