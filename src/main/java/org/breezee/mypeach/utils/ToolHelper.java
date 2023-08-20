@@ -42,14 +42,14 @@ public class ToolHelper {
      * @return
      */
     public static String getKeyNameMore(String sKeyString, MyPeachProperties prop){
-        String keyPrefix = "#";
-        String keySuffix = "#";
-        if(prop.getKeyStyle()== SqlKeyStyleEnum.POUND_SIGN_BRACKETS){
-            keyPrefix = StaticConstants.HASH_LEFT_BRACE;
-            keySuffix = StaticConstants.RIGHT_BRACE;
-        }
+        String keyPrefix = StaticConstants.HASH;
+        String keySuffix = StaticConstants.HASH;
+//        if(prop.getKeyStyle()== SqlKeyStyleEnum.POUND_SIGN_BRACKETS){
+//            keyPrefix = StaticConstants.HASH_LEFT_BRACE;
+//            keySuffix = StaticConstants.RIGHT_BRACE;
+//        }
         String sKeyNameMore = sKeyString.replace("'","").replace("%","")
-                .replace(keyPrefix,"").replace(keySuffix,"");
+                .replace(keyPrefix,"").replace(keySuffix,"").trim();
         return sKeyNameMore;//键中包含其他信息
     }
 
@@ -62,9 +62,9 @@ public class ToolHelper {
     public static String getKeyName(String sKeyString, MyPeachProperties prop){
         String sKeyNameMore = getKeyNameMore(sKeyString,prop);
         if(sKeyNameMore.indexOf(":") <0){
-            return sKeyNameMore;//键中没有包含其他信息
+            return sKeyNameMore.trim();//键中没有包含其他信息
         }else {
-            return sKeyNameMore.split(":")[0];//键中包含其他信息，但第一个必须是键名
+            return sKeyNameMore.split(":")[0].trim();//键中包含其他信息，但第一个必须是键名
         }
     }
 

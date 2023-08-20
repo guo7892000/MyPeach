@@ -10,6 +10,7 @@ package org.breezee.mypeach.config;
  * @history:
  *   2023/08/04 BreezeeHui 修改remarkPatter正则式，对/**\/中间应该可以包括换行符
  *   2023/08/14 BreezeeHui 增加MERGE INTO的正则式
+ *   2023/08/20 BreezeeHui 进一步完善和优化键配置、动态参数的正则式
  */
 public class StaticConstants {
     public static final String parenthesesRoundKey = "##";
@@ -109,4 +110,23 @@ public class StaticConstants {
     //MERGE INTO
     public static final String mergePatternHead = "^MERGE\\s+(INTO\\s+)*(\\w+|[.\\[\\]`])+(\\s+AS\\s+\\w+)*\\s+USING\\s+"; //有些表名要加[]`.
     public static final String mergePatternMatchOrNot = "WHEN\\s+(NOT\\s+)*MATCHED\\s+THEN\\s+";
+
+    //动态参数（支持{}、[]与连接符(&-@|)任意组合）：示例：  /***@MP&DYN {[id=1]}& {[A.ID,B.ID]}  @MP&DYN****/
+    public static final String dynConditionKeyPre = "@MP&DYN&KEY:";//动态参数的键前缀
+    public static final String dynSqlSegmentConfigPatternCenter = "\\]\\s*\\}\\s*[&\\-,;，；]+\\s*\\{\\s*\\[\\s*";//动态条件SQL段配置正则式
+    public static final String dynSqlSegmentConfigPatternLeft = "\\s*[\\[\\{]+\\s*";//动态条件SQL段配置正则式_左边
+    public static final String dynSqlSegmentConfigPatternRight = "\\s*[\\]\\}]+\\s*";//动态条件SQL段配置正则式_右边
+
+    //键正则式（支持中间的空格）：针对#{}()-'都要加上转义符，否则会报错！！
+    //键大类支持中英文冒号(:：)、分号(;；)分隔，小类支持横杆(-)、竖线(|)、与(&)、电邮字符（@）分隔
+    //#{}参数形式：示例： ' % # { MDLIST ：  M ；R : LS : F : D - now() &  r  | n  @ ii : N } % '
+    public static final String keyPatternHashLeftBrace = "'?(\\s*%)?\\s*\\#\\s*\\{\\s*\\w+\\s*([:;：；]+\\s*\\w+\\s*([\\-\\|&@]\\s*(\\(|\\)|\\w|,|\\')*\\s*)*)*\\s*\\}(\\s*%)?(\\s*')?";
+    //##参数形式：示例： ' % # MDLIST ：  M ；R : LS : F : D - now() &  r  | n  @ ii : N # % '
+    public static final String keyPatternHash = "'?(\\s*%)?\\s*\\#\\s*\\w+\\s*([:;：；]+\\s*\\w+\\s*([\\-\\|&@]\\s*(\\(|\\)|\\w|,|\\')*\\s*)*)*\\s*\\#(\\s*%)?(\\s*')?";
+
+    public static final String keyBigTypeSpit = ":|：|;|；"; // new char[] { ':', '：', ';', '；' }; //键配置大类
+    public static final String keySmallTypeSpit = "-|&|@|\\|";  //new char[] { '-', '&', '@', '|' }; //键配置小类
+    //IN和NOT IN正则式
+    public static final String notInPattern = "\\s+NOT\\s+IN\\s+\\(";
+    public static final String inPattern = "\\s+IN\\s+\\(";
 }

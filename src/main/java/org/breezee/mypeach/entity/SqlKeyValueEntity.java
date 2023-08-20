@@ -16,6 +16,7 @@ import java.util.Map;
  * @date: 2022/4/12 16:45
  * @history:
  *   2023/07/21 BreezeeHui 针对Like的前后模糊查询，其键值也相应增加%，以支持模糊查询
+ *   2023/08/18 BreezeeHui 参数前后缀只取#参数#；当条件不传值时，取默认值，根据默认值是否必须值替换来决定值必须值替换。
  */
 public class SqlKeyValueEntity {
     /**
@@ -184,12 +185,13 @@ public class SqlKeyValueEntity {
      * @param prop
      * @return
      */
-    public static SqlKeyValueEntity build(String sKeyString, Map<String,Object> dicQuery, MyPeachProperties prop){
+    public static SqlKeyValueEntity build(String sKeyString, Map<String,Object> dicQuery, MyPeachProperties prop, boolean isPreGetCondition){
+        sKeyString = sKeyString.trim();
         SqlKeyValueEntity entity = new SqlKeyValueEntity();
         entity.setKeyString(sKeyString);
         if(sKeyString.contains("'")){
             entity.setHasSingleQuotes(true);
-            sKeyString = sKeyString.replace("'","");
+            sKeyString = sKeyString.replace("'","").trim();
         }
         if(sKeyString.startsWith("%")){
             entity.setHasLikePrefix(true);
@@ -205,12 +207,7 @@ public class SqlKeyValueEntity {
         entity.setKeyName(sParamName);
         entity.setParamString(prop.getParamPrefix()+sParamName+ prop.getParamSuffix());
 
-        String sParamNamePreSuffix;
-        if(prop.getKeyStyle()== SqlKeyStyleEnum.POUND_SIGN_BRACKETS){
-            sParamNamePreSuffix = StaticConstants.HASH_LEFT_BRACE + sParamName + StaticConstants.RIGHT_BRACE;
-        }else {
-            sParamNamePreSuffix = StaticConstants.HASH + sParamName + StaticConstants.HASH;
-        }
+        String sParamNamePreSuffix= StaticConstants.HASH + sParamName + StaticConstants.HASH;
 
         //取出传入条件中的值：对于字符串类型，会替换字符中的单引号
         Object inValue = null;
@@ -228,20 +225,27 @@ public class SqlKeyValueEntity {
         }
 
         entity.setKeyMoreInfo(KeyMoreInfo.build(sParamNameMore,inValue));//设置更多信息对象
-        if (entity.getKeyMoreInfo().IsNoQuotationMark)
-        {
+        if (entity.getKeyMoreInfo().IsNoQuotationMark) {
             entity.setHasSingleQuotes(false); //重新根据配置来去掉引号
         }
-        //值为空，且默认值不为空才赋值
-        if (inValue == null && entity.getKeyMoreInfo().DefaultValue!=null && !entity.getKeyMoreInfo().DefaultValue.isEmpty())
-        {
-            inValue= entity.getKeyMoreInfo().DefaultValue;//取默认值
+        //使用默认值条件：条件传入值为空，非预获取参数，默认值不为空
+        if (inValue == null && !isPreGetCondition && entity.getKeyMoreInfo().DefaultValue!=null && !entity.getKeyMoreInfo().DefaultValue.isEmpty()) {
             if (entity.getKeyMoreInfo().IsDefaultValueNoQuotationMark) {
                 entity.setHasSingleQuotes(false);
             }
+            if (entity.getKeyMoreInfo().IsDefaultValueValueReplace) {
+                entity.getKeyMoreInfo().setMustValueReplace(true); //当没有传入值，且默认值为值替换时。当作是有传入默认值，且是值替换
+                inValue= entity.getKeyMoreInfo().DefaultValue.replace("'","").trim();//取默认值。为防止SQL注入，去掉单引号
+            }else{
+                inValue= entity.getKeyMoreInfo().DefaultValue.trim(); //将作参数化，不需要替换掉引号
+            }
         }
 
-        if(inValue!=null){
+        if(inValue==null || inValue.toString().isEmpty()){
+            if(!entity.keyMoreInfo.nullable){
+                entity.setErrorMessage("键("+entity.getKeyName() + ")的值没有传入。");
+            }
+        }else {
             entity.setKeyValue(inValue);
             entity.setReplaceKeyWithValue(inValue);
             entity.setHasValue(true);
@@ -255,10 +259,6 @@ public class SqlKeyValueEntity {
             }
             if(entity.hasSingleQuotes){
                 entity.setReplaceKeyWithValue("'" + entity.getReplaceKeyWithValue() + "'");
-            }
-        }else {
-            if(!entity.keyMoreInfo.nullable){
-                entity.setErrorMessage("键("+entity.getKeyName() + ")的值没有传入。");
             }
         }
 

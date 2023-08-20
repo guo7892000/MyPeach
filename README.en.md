@@ -6,6 +6,21 @@ MyPeach is a dynamic SQ conversion tool that can generate dynamic SQL based on t
 If a value is passed in for a certain key, the condition will be retained and parameterized or replaced with characters (configurable and selectable); Otherwise, discard or modify the condition to AND 1=1 (when analyzing multiple conditions enclosed in parentheses).
 The dynamic parts include: all types of conditions, Insert items, and UPDATE items.
 
+#### Advantages
+*Write executable SQL at once, without the need for code concatenation conditions, making it easy to check for syntax errors;
+*Just mark the parameters in SQL (recommended to use # parameter #) and pass in the condition set, then the parse method will automatically convert to the final parameterized SQL and condition set, avoiding SQL injection issues.
+*The configuration of parameters makes SQL customization more powerful. Parameter configuration example: # MDLIST: M: R: LS: F: D-now() - r n: N #.
+The first item must be the parameter name (MDLIST in this example); M (Must) is required; R (Replace) is the replacement value; LS refers to a list of characters (List String), and LI refers to an integer list; F is the optimization configuration item (First);
+D is the default value, which supports -&,;,; Six characters are used as separators for more attribute configurations, with the second one being the default value (note: if R configuration is included, single quotes in the value will be removed), followed by R and N being value replacement and unquoted configuration, respectively.
+*Conditional dynamic SQL segment: SQL segments can be dynamically added based on conditional values, with the format:/* @ MP&DYN {[parameter=1]}&{[SQL segment]} @ MP&DYN */, which is configured in/* */and has the @ MP&DYN character in the comment as a conditional dynamic SQL segment declaration,
+The content is composed of&associated conditions and SQL segments, both of which are wrapped by {[conditions or SQL segments]}. Example:/* * * @ MP&DYN {[id=1]}&{[A.ID, B.ID]} @ MP&DYN ******/, which means that when the id condition value is 1, the SQL segments of A.ID and B.ID are added.
+Operators include: integer comparison:>=,>,<=,<, character comparison:=,!=,<>
+
+#### Disadvantages
+*Currently, most SQL statements are supported, but they cannot cover all.
+*The project application is still limited to personal use and bug detection and repair, without large-scale project application.
+*Currently, Breezee is only maintaining it individually and has not established a team for operation.
+
 #### Software Architecture
 *Based on Spring Boot, very lightweight
 *Database independence
@@ -22,7 +37,7 @@ The dynamic parts include: all types of conditions, Insert items, and UPDATE ite
     SELECT。。。UNION ALL SELECT..   
 ```
 *SQL statement keys can come with built-in validation rule descriptions, making SQL more secure
-Conditional use: key characters support the '# MDLIST: N: R: LS: F #' format, where N or M represents non empty, R represents value replacement, LS represents character list, and LI represents integer list, that is, some characters in IN brackets; F represents the preferred configuration for use.
+Conditional use: key characters support the '# MDLIST: M: R: LS: F #' format, where M represents non empty, R represents value replacement, LS represents character list, and LI represents integer list, that is, some characters in IN brackets; F represents the preferred configuration for use.
 *Generate SQL only, do not execute. To use the generated parameterized SQL, you need to retrieve the parameterized list from the ParserResult, that is, the mapQuery attribute value, which is of type Map<string, SqlKeyValueEntity>.
 *Generate SQL types with optional parameterization or character replacement; For single quotes in string values, they are removed and then added before and after the value.
 

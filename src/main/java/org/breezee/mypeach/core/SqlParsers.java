@@ -78,7 +78,7 @@ public class SqlParsers {
 
     private AbstractSqlParser GetParser(String sSql, Map<String, Object> dic) throws Exception {
         AbstractSqlParser parser = new SelectSqlParser(properties);
-        sSql = parser.RemoveSqlRemark(sSql,dic);
+        sSql = parser.RemoveSqlRemark(sSql,dic,false);
         //根据SQL的正则，再重新返回正确的SqlParser
         if (parser.isRightSqlType(sSql))
         {
