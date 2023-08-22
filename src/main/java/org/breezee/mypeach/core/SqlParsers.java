@@ -78,7 +78,10 @@ public class SqlParsers {
 
     private AbstractSqlParser GetParser(String sSql, Map<String, Object> dic) throws Exception {
         AbstractSqlParser parser = new SelectSqlParser(properties);
-        sSql = parser.RemoveSqlRemark(sSql,dic,false);
+        //去掉注释
+        sSql = parser.RemoveSqlRemark(sSql, dic,false);
+        //将SQL中的()替换为##序号##，方便从整体上分析SQL类型
+        sSql = parser.generateParenthesesKey(sSql);
         //根据SQL的正则，再重新返回正确的SqlParser
         if (parser.isRightSqlType(sSql))
         {
@@ -89,17 +92,18 @@ public class SqlParsers {
         {
             return parser;
         }
-        parser = new InsertSqlParser(properties);
-        if (parser.isRightSqlType(sSql))
-        {
-            return parser;
-        }
         parser = new DeleteSqlParser(properties);
         if (parser.isRightSqlType(sSql))
         {
             return parser;
         }
         parser = new CommonSqlParser(properties);
+        if (parser.isRightSqlType(sSql))
+        {
+            return parser;
+        }
+        //Insert必须要放在Merge后面，因为两者都有Values，会误把Merge当作Insert
+        parser = new InsertSqlParser(properties);
         if (parser.isRightSqlType(sSql))
         {
             return parser;

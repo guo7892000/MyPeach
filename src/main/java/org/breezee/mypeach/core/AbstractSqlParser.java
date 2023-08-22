@@ -628,7 +628,7 @@ public abstract class AbstractSqlParser {
      * @param sSql
      * @return
      */
-    protected String generateParenthesesKey(String sSql) {
+    public String generateParenthesesKey(String sSql) {
         Matcher mc;
         StringBuilder sb = new StringBuilder();
         mc = ToolHelper.getMatcher(sSql, StaticConstants.parenthesesPattern);

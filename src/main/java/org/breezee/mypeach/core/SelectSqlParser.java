@@ -110,6 +110,11 @@ public class SelectSqlParser extends AbstractSqlParser {
         {
             return true;
         }
+        mc = ToolHelper.getMatcher(sSql, StaticConstants.selectPattern);
+        if (mc.find())
+        {
+            return true;
+        }
         return false;
     }
 }
