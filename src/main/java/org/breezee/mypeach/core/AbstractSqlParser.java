@@ -775,6 +775,18 @@ public abstract class AbstractSqlParser {
         //二、 如果语句中没有FROM语句，那会直接进入
         Matcher mcWhere = ToolHelper.getMatcher(sSql, StaticConstants.wherePattern);
         if (!mcWhere.find()) {
+            //没有Where，那就是直接SELECT部分
+            if (!hasKey(sSql)) {
+                return sSql; //没有参数时直接返回
+            }
+            //有键
+            String[] keyList = sSql.split(",");
+            int iCount = 0;
+            for (String item:keyList) {
+                String sValue = iCount == 0 ? "" : ",";
+                sb.append(sValue + singleKeyConvert(item));
+                iCount++;
+            }
             return sb.toString();
         }
 
@@ -953,6 +965,7 @@ public abstract class AbstractSqlParser {
         //比如WITH...INSERT INTO...SELECT和INSERT INTO...WITH...INSERT INTO...
         String sSource = "";
         String sReturn = "";
+        int iLastStart = 0;
         while (hasFirstMatcher) {
             sSource = mapsParentheses.get(mc.group());//取出 ##序号## 内容
 
@@ -970,10 +983,12 @@ public abstract class AbstractSqlParser {
                 String sConnect = sLastAndOr + sSqlNew;
                 if (!hasKey(sConnect)) {
                     //2.2 合并后也没有键，则直接追加到头部字符构建器
-                    return sConnect;
+                    sb.append(sConnect);
+                    return sb.toString();
                 }
                 //2.3 如果有键传入，那么进行单个键转换
-                return singleKeyConvert(sConnect);
+                sb.append(singleKeyConvert(sConnect));
+                return sb.toString();
             }
 
             //判断是否所有键为空
@@ -986,20 +1001,36 @@ public abstract class AbstractSqlParser {
                 }
             }
 
-            String sPre = sSql.substring(0, mc.start());
-            String sEnd = sSql.substring(mc.end());
+            String sPre = sSql.substring(iLastStart, mc.start());
+            iLastStart = mc.end();
+            String sEnd = sSql.substring(iLastStart); //注：后续部分还可能用##序号##
 
             //3、子查询处理
-            String sChildQuery = childQueryConvert(sLastAndOr + sPre, sEnd, sSource);
+            String sChildQuery = childQueryConvert(sLastAndOr + sPre, "", sSource); //这里先不把结束字符加上
             sb.append(sChildQuery);//加上子查询
             if (allKeyNull || ToolHelper.IsNotNull(sChildQuery)) {
+                //取出下个匹配##序号##的键，如果有，那么继续下个循环去替换##序号##
+                hasFirstMatcher = mc.find();
+                if (hasFirstMatcher)
+                {
+                    //继续取出##序号##键的值来替换
+                    sSqlNew = sEnd;//剩余部分将要被处理
+                    continue;
+                }
+                else
+                {
+                    sb.append(sEnd);//这里把结束字符加上
+                }
                 sReturn = sb.toString();
                 for(String sKey : dicReplace.keySet()) {
                     sReturn = sReturn.replace(sKey, dicReplace.get(sKey)); //在返回前替换不包含参数的##序号##字符
                 }
                 return sReturn;//如果全部参数为空，或者子查询已处理，直接返回
             }
-            //4、有键值传入，并且非子查询，做AND或OR正则匹配分拆字符
+
+            //4、非子查询的处理
+            sb.append(sEnd);//这里把结束字符加上
+            //有键值传入，并且非子查询，做AND或OR正则匹配分拆字符
             sb.append(sLastAndOr + sPre);//因为不能移除"()"，所以这里先拼接收"AND"或"OR"，记得加上头部字符
 
             //AND或OR正则匹配处理
