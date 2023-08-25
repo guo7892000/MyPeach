@@ -33,7 +33,7 @@ import java.util.regex.Matcher;
  *   2023/08/11 BreezeeHui 将移除注释抽成一个独立方法RemoveSqlRemark；增加SQL类型是否正确的抽象方法isRightSqlType。
  *   2023/08/18 BreezeeHui 针对注释中动态SQL的条件拼接，在预获取条件参数时，把动态SQL中的键也加进去！
  *   2023/08/19 BreezeeHui 只有在非预获取条件参数，且传入条件为空时，才把默认值赋给传入条件值！
- *   2023/08/24 BreezeeHui 修正子查询或之后中有多个()转换错误问题；修正SELECT有#参数#时转换错误问题。
+ *   2023/08/24 BreezeeHui 修正子查询或之后中有多个()转换错误问题；修正SELECT有#参数#时转换错误问题；修正WITH正则式。
  */
 public abstract class AbstractSqlParser {
 
@@ -85,7 +85,7 @@ public abstract class AbstractSqlParser {
         }
         parenthesesRoundKeyPattern = parenthesesRoundKey + "\\d+" + parenthesesRoundKey;
         //因为括号已被替换为##序号##，所以原正则式已不能使用："\\)?\\s*,?\\s*WITH\\s+\\w+\\s+AS\\s*\\("+commonSelectPattern;
-        insertIntoWithSelectPartnCommon = "\\s*,?\\s*WITH\\s+\\w+\\s+AS\\s";
+        insertIntoWithSelectPartnCommon = "\\s*,?\\s*(WITH)*\\s+\\w+\\s+AS\\s"; //注：这里的WITH只是第一个临时表有，后面的是没有的
         withSelectPartn = insertIntoWithSelectPartnCommon + "+" + parenthesesRoundKeyPattern;
         /*最终正则式：^\s*,?\s*WITH\s+\w+\s+AS\s*##\d+##\s*INSERT\s+INTO\s+\S+\s*##\d+##*/
         withInsertIntoSelectPartn = "^" + insertIntoWithSelectPartnCommon+"*" + parenthesesRoundKeyPattern +"\\s*"
@@ -493,8 +493,8 @@ public abstract class AbstractSqlParser {
                     //大于等于：使用整型比较
                     sOperateStr = ">=";
                     iFinStart = sCond.indexOf(sOperateStr);
-                    String sKey = sCond.substring(0, iFinStart);
-                    String sValue = sCond.substring(iFinStart + sOperateStr.length());
+                    String sKey = sCond.substring(0, iFinStart).trim();
+                    String sValue = sCond.substring(iFinStart + sOperateStr.length()).trim();
                     if (dic.containsKey(sKey)) {
                         Integer iCondValue = Integer.parseInt(dic.get(sKey).toString());
                         Integer iSqlValue = Integer.parseInt(sValue);
@@ -507,8 +507,8 @@ public abstract class AbstractSqlParser {
                     //小于等于：使用整型比较
                     sOperateStr = "<=";
                     iFinStart = sCond.indexOf(sOperateStr);
-                    String sKey = sCond.substring(0, iFinStart);
-                    String sValue = sCond.substring(iFinStart + sOperateStr.length());
+                    String sKey = sCond.substring(0, iFinStart).trim();
+                    String sValue = sCond.substring(iFinStart + sOperateStr.length()).trim();
                     if (dic.containsKey(sKey)) {
                         Integer iCondValue = Integer.parseInt(dic.get(sKey).toString());
                         Integer iSqlValue = Integer.parseInt(sValue);
@@ -521,8 +521,8 @@ public abstract class AbstractSqlParser {
                     //小于：使用整型比较
                     sOperateStr = "<";
                     iFinStart = sCond.indexOf(sOperateStr);
-                    String sKey = sCond.substring(0, iFinStart);
-                    String sValue = sCond.substring(iFinStart + sOperateStr.length());
+                    String sKey = sCond.substring(0, iFinStart).trim();
+                    String sValue = sCond.substring(iFinStart + sOperateStr.length()).trim();
                     if (dic.containsKey(sKey)) {
                         Integer iCondValue = Integer.parseInt(dic.get(sKey).toString());
                         Integer iSqlValue = Integer.parseInt(sValue);
@@ -535,8 +535,8 @@ public abstract class AbstractSqlParser {
                     //大于：使用整型比较
                     sOperateStr = ">";
                     iFinStart = sCond.indexOf(sOperateStr);
-                    String sKey = sCond.substring(0, iFinStart);
-                    String sValue = sCond.substring(iFinStart + sOperateStr.length());
+                    String sKey = sCond.substring(0, iFinStart).trim();
+                    String sValue = sCond.substring(iFinStart + sOperateStr.length()).trim();
                     if (dic.containsKey(sKey)) {
                         Integer iCondValue = Integer.parseInt(dic.get(sKey).toString());
                         Integer iSqlValue = Integer.parseInt(sValue);
@@ -549,8 +549,8 @@ public abstract class AbstractSqlParser {
                     //等于：使用字符比较
                     sOperateStr = "=";
                     iFinStart = sCond.indexOf(sOperateStr);
-                    String sKey = sCond.substring(0, iFinStart);
-                    String sValue = sCond.substring(iFinStart + sOperateStr.length());
+                    String sKey = sCond.substring(0, iFinStart).trim();
+                    String sValue = sCond.substring(iFinStart + sOperateStr.length()).trim();
                     if (dic.containsKey(sKey)) {
                         return sValue.equals(dic.get(sKey).toString()) ? sDynSql : "";
                     }
@@ -561,8 +561,8 @@ public abstract class AbstractSqlParser {
                     //不等于：使用字符比较
                     sOperateStr = "!=";
                     iFinStart = sCond.indexOf(sOperateStr);
-                    String sKey = sCond.substring(0, iFinStart);
-                    String sValue = sCond.substring(iFinStart + sOperateStr.length());
+                    String sKey = sCond.substring(0, iFinStart).trim();
+                    String sValue = sCond.substring(iFinStart + sOperateStr.length()).trim();
                     if (dic.containsKey(sKey)) {
                         return sValue.equals(dic.get(sKey).toString()) ? "" : sDynSql;
                     }
@@ -573,8 +573,8 @@ public abstract class AbstractSqlParser {
                     //不等于：使用字符比较
                     sOperateStr = "<>";
                     iFinStart = sCond.indexOf(sOperateStr);
-                    String sKey = sCond.substring(0, iFinStart);
-                    String sValue = sCond.substring(iFinStart + sOperateStr.length());
+                    String sKey = sCond.substring(0, iFinStart).trim();
+                    String sValue = sCond.substring(iFinStart + sOperateStr.length()).trim();
                     if (dic.containsKey(sKey))
                     {
                         return sValue.equals(dic.get(sKey).toString()) ? "" : sDynSql;

@@ -24,6 +24,7 @@ public class ToolHelper {
      * @return
      */
     public static boolean IsNotNull(Object obj){
+
         return obj != null &&  !String.valueOf(obj).trim().isEmpty();
     }
 
