@@ -64,16 +64,17 @@ public class SqlParsers {
      */
     public ParserResult parse(String sSql, Map<String, Object> dic, TargetSqlParamTypeEnum paramTypeEnum) throws Exception
     {
-        return GetParser(sSql,dic).parse(sSql, dic, paramTypeEnum);
+        AbstractSqlParser sqlParser = GetParser(sSql, dic);
+        return sqlParser.parse(sSql, dic, paramTypeEnum);//为方便调试，这里拆成两行
     }
 
     public ParserResult parse(SqlTypeEnum sqlType, String sSql, Map<String, Object> dic){
         return parse(sqlType,sSql,dic,TargetSqlParamTypeEnum.NameParam);
     }
 
-    public Map<String, SqlKeyValueEntity> PreGetParam(String sSql, Map<String, Object> dic) throws Exception
-    {
-        return GetParser(sSql,dic).PreGetParam(sSql,dic);
+    public Map<String, SqlKeyValueEntity> PreGetParam(String sSql, Map<String, Object> dic) throws Exception {
+        AbstractSqlParser sqlParser = GetParser(sSql, dic);
+        return sqlParser.PreGetParam(sSql, dic); //为方便调试，这里拆成两行
     }
 
     private AbstractSqlParser GetParser(String sSql, Map<String, Object> dic) throws Exception {
@@ -108,6 +109,6 @@ public class SqlParsers {
         {
             return parser;
         }
-        throw new Exception("不支持的SQL类型，请将SQL发给作者，后续版本增加支持！！");
+        throw new Exception("不支持的SQL类型，请将SQL发给作者（guo7892000@126.com），后续版本增加支持！！");
     }
 }

@@ -42,7 +42,7 @@ public class SelectSqlParser extends AbstractSqlParser {
         {
             return sbHead.toString();//当是WITH...INSERT INTO...SELECT...方式且已处理，则返回处理过的SQL
         }
-        //UNION 或 UNION ALL 或 其他处理
+        //UNION 或 UNION ALL的处理
         sSql = unionOrUnionAllConvert(sSql, sbHead);
         if (ToolHelper.IsNull(sSql))
         {
@@ -52,38 +52,6 @@ public class SelectSqlParser extends AbstractSqlParser {
         String sConvertSql = queryHeadSqlConvert(sSql, false);
         sbHead.append(sConvertSql);//通用的以Select开头的处理
         return sbHead.toString();
-    }
-
-    /// <summary>
-    /// UNION 或 UNION ALL 或 其他处理
-    /// </summary>
-    /// <param name="sSql">处理前SQL</param>
-    /// <param name="sbHead">处理后的拼接SQL</param>
-    /// <returns></returns>
-    private String unionOrUnionAllConvert(String sSql, StringBuilder sbHead)
-    {
-        //UNION和UNION ALL处理
-        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.unionAllPartner);
-        int iStart = 0;
-        while (mc.find())
-        {
-            sqlTypeEnum = SqlTypeEnum.SELECT;
-            String sOne = sSql.substring(iStart, mc.start());
-            String sConvertSql = queryHeadSqlConvert(sOne, false);
-            sbHead.append(sConvertSql);
-            iStart = mc.end();
-            sbHead.append(mc.group());
-        }
-
-        if (iStart > 0)
-        {
-            //UNION或UNION ALL处理剩下部分的处理
-            String sOne = sSql.substring(iStart);
-            String sConvertSql = queryHeadSqlConvert(sOne, false);
-            sbHead.append(sConvertSql);
-            return "";
-        }
-        return sSql;
     }
 
     /**

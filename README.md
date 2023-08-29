@@ -9,7 +9,7 @@ MyPeach是一个动态SQ转换工具，它能根据SQL中配置的键（默认�
 * 只需要在SQL标志好参数（推荐使用#参数#）及传入条件集合，那么parse方法会自动转换为最终参数化SQL及条件集合，避免了SQL注入问题。
 * 参数的配置化，让SQL定制化更强大。键大类支持中英文冒号(:：)、分号(;；)分隔，键小类支持横杆(-)、竖线(|)、与(&)、电邮字符（@）分隔。
   参数配置示例：#MDLIST:M:R:LS:F:D-now()-r-n:N#。
-  其中第一项必须是为参数名（本例为MDLIST）；M（Must）是必填；R（Replace）是替换值；LS是字符列表（List String），LI是指整型列表； F是优化配置项（First）；
+  其中第一项必须是为参数名（本例为MDLIST）；M（Must）是必填；R（Replace）是替换值；LS是字符列表（List String），LI是指整型列表； F是优先使用配置项（First）；
   D为默认值，其支持-&|@四种字符作为分隔符的更多属性配置（不区分大小写），其中第二个必须是默认值（注：如包括R配置，则会去掉值中的单引号），后面的R、N分别是值替换、不加引号配置。
 * 条件动态SQL段：可以根据条件值动态加入SQL段，格式：/*@MP&DYN {[参数=1]}& {[SQL段]}  @MP&DYN*/，即配置在/**/中，并且注释中有@MP&DYN字符，作为条件动态SQL段声明，
   内容由&关联条件与SQL段，两者都由{[条件或SQL段]}包裹起来(注：包裹字符是{}[]至少一个组合)。示例：/***@MP&DYN {[id=1]}& {[A.ID,B.ID]}  @MP&DYN****/，即表示id条件值为1时，加入A.ID,B.ID的SQL段。
@@ -18,20 +18,46 @@ MyPeach是一个动态SQ转换工具，它能根据SQL中配置的键（默认�
 * 目前支持大部分的SQL语句，但还不能覆盖全部。
 * 项目应用还停留在个人使用发现BUG并修复，没有大规模项目应用。
 * 目前只是Breezee个人在维护，没有建立团队经营。
+## 使用注意事项
+* 当使用命名参数时，如针对某个条件的所有配置都不加优先使用配置项(F)，那么只取第一个配置项作为其全局参数配置。
+* MySql支持#开头注释，但最好不要在注释中增加#注释#（那样也会将备注对应字符参数化，虽然不影响运行SQL），因为其跟参数格式一样了。解决办法：注释开头为#--，或者/**#注释#*/
+* IN的左右两边都必须至少加一个空格，即:列名 IN ()。
+## 重要课题
+### 已实现
+* 模糊查询：在值前后增加%实现。
+* 剔除所有注释：正则式匹配、/*和*/的配对
+* 整体精确分析SQL：通过()括号配对简化SQL，再单独对()分析实现 
+* 参数支持格式：#参数#、#{参数}
+* 条件动态SQL段拼接：通过多行注释及@MP&DYN的MyPeach标签实现，示例：/*@MP&DYN {[参数=1]}& {[SQL段]}  @MP&DYN*/
+* 自动适配SQL类型：每种语句类型提供本类型的匹配判断
+* 配置多样化：
+    必填(M)：参数必须有值传入，不然就会报错。
+    优先使用配置项(F)：优先使用的配置项。对某个参数存在多个配置时，以有F配置的为主；否则是以第一个为主。
+    替换值(R)：不使用参数化，直接将参数替换为具体值。
+    值不加单引号(N)：针对值替换，替换的值前后不加单引号。如针对整型、函数。
+    IN字符清单(LS)：替换为：'值1','值2'...
+    IN整型清单(LI)：替换为：值1,值2...
+    默认值配置(D)：当没值传入时使用默认条件。其下还有字配置项，示例：D-8-R-N：第一个项为默认值(示例中的8)，R为值替换，N为不加引号。
+* 支持绝大部分SQL：包括SELECT、INSERT、UPDATE、DELETE、MERGE等语句。
+* 支持预获取SQL所有参数方法，方便测试。
+* 针对LS和LI，当超过自定义配置的多少项后，分拆出 AND (xx in ('','') OR xx in ('',''))。
+### 待实现
+* 暂无：
 ## 特点
 * 基于Spring Boot，非常轻量
 * 数据库无关性
 * 支持的语句样式：
 ```
     INSER INTO ...VALUES... 
-    INSERT INTO...SELECT...FROM...WHERE... 
-    INSERT INTO...WITH...SELECT...FROM...WHERE... 
-    WITH...INSERT INTO... SELECT...FROM...WHERE... 
-    UPDATE ... SET...FROM...WHERE...  
-    DELETE FROM...WHERE...  
-    SEELCT...FROM...WHERE...GROUP BY...HAVING...ORDER BY...LIMIT...  
-    WITH...AS (),WITH...AS () SELECT...FROM...WHERE...
-    SELECT...UNION ALL SELECT...   
+    INSERT INTO...SELECT...FROM...WHERE...(UNION ALL SELECT...FROM...WHERE...)
+    INSERT INTO...WITH...SELECT...FROM...WHERE...(UNION ALL SELECT...FROM...WHERE...) 
+    WITH...INSERT INTO... SELECT...FROM...WHERE...(UNION ALL SELECT...FROM...WHERE...)  
+    UPDATE...SET...FROM...WHERE...  
+    DELETE FROM...WHERE...
+    SEELCT (TOP N)...FROM...WHERE...(GROUP BY...)(HAVING...)(ORDER BY...)(LIMIT...)  
+    WITH...AS (),...AS () SELECT...FROM...WHERE...
+    SELECT...UNION ALL SELECT... 
+    MERGE INTO...  
 ```
 * SQL语句键可带内置的校验规则描述，让SQL更安全  
   条件使用：键字符支持'#MDLIST:M:R:LS:F#'格式，其中M表示非空，R表示值替换，LS表示字符列表，LI为整型列表，即IN括号里的部分字符；F表示优先使用的配置。  

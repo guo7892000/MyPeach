@@ -14,6 +14,8 @@ import java.util.regex.Matcher;
  * @email: guo7892000@126.com
  * @wechat: BreezeeHui
  * @date: 2022/4/12 16:45
+ * @history:
+ *
  */
 public class DeleteSqlParser extends AbstractSqlParser {
 
@@ -34,12 +36,12 @@ public class DeleteSqlParser extends AbstractSqlParser {
     @Override
     public String headSqlConvert(String sSql) {
         StringBuilder sb = new StringBuilder();
-        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.deletePattern);//抽取出INSERT INTO TABLE_NAME(部分
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.deletePattern);
         if (mc.find()){
             sqlTypeEnum = SqlTypeEnum.DELETE;
-            sb.append(mc.group());//不变的INSERT INTO TABLE_NAME(部分先加入
+            sb.append(mc.group());
             //FROM部分SQL处理
-            String sWhereSql = fromWhereSqlConvert(sSql.substring(mc.end()),false);
+            String sWhereSql = fromWhereSqlConvert(sSql.substring(mc.end()),false);//这里不可能有UNION或UNION ALL
             //如果禁用全表更新，并且条件为空，则抛错！
             if(ToolHelper.IsNull(sWhereSql) && myPeachProp.isForbidAllTableUpdateOrDelete()){
                 mapError.put("出现全表删除，已停止","删除语句不能没有条件，那样会清除整张表数据！");//错误列表
@@ -69,7 +71,7 @@ public class DeleteSqlParser extends AbstractSqlParser {
     @Override
     public boolean isRightSqlType(String sSql)
     {
-        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.deletePattern);//抽取出INSERT INTO TABLE_NAME(部分
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.deletePattern);
         return mc.find();
     }
 }
