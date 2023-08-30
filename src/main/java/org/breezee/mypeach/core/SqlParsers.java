@@ -64,32 +64,31 @@ public class SqlParsers {
      */
     public ParserResult parse(String sSql, Map<String, Object> dic, TargetSqlParamTypeEnum paramTypeEnum) throws Exception
     {
-        return GetParser(sSql,dic).parse(sSql, dic, paramTypeEnum);
+        AbstractSqlParser sqlParser = GetParser(sSql, dic);
+        return sqlParser.parse(sSql, dic, paramTypeEnum);//为方便调试，这里拆成两行
     }
 
     public ParserResult parse(SqlTypeEnum sqlType, String sSql, Map<String, Object> dic){
         return parse(sqlType,sSql,dic,TargetSqlParamTypeEnum.NameParam);
     }
 
-    public Map<String, SqlKeyValueEntity> PreGetParam(String sSql, Map<String, Object> dic) throws Exception
-    {
-        return GetParser(sSql,dic).PreGetParam(sSql,dic);
+    public Map<String, SqlKeyValueEntity> PreGetParam(String sSql, Map<String, Object> dic) throws Exception {
+        AbstractSqlParser sqlParser = GetParser(sSql, dic);
+        return sqlParser.PreGetParam(sSql, dic); //为方便调试，这里拆成两行
     }
 
     private AbstractSqlParser GetParser(String sSql, Map<String, Object> dic) throws Exception {
         AbstractSqlParser parser = new SelectSqlParser(properties);
-        sSql = parser.RemoveSqlRemark(sSql,dic,false);
+        //去掉注释
+        sSql = parser.RemoveSqlRemark(sSql, dic,false);
+        //将SQL中的()替换为##序号##，方便从整体上分析SQL类型
+        sSql = parser.generateParenthesesKey(sSql);
         //根据SQL的正则，再重新返回正确的SqlParser
         if (parser.isRightSqlType(sSql))
         {
             return parser;
         }
         parser = new UpdateSqlParser(properties);
-        if (parser.isRightSqlType(sSql))
-        {
-            return parser;
-        }
-        parser = new InsertSqlParser(properties);
         if (parser.isRightSqlType(sSql))
         {
             return parser;
@@ -104,6 +103,12 @@ public class SqlParsers {
         {
             return parser;
         }
-        throw new Exception("不支持的SQL类型，请将SQL发给作者，后续版本增加支持！！");
+        //Insert必须要放在Merge后面，因为两者都有Values，会误把Merge当作Insert
+        parser = new InsertSqlParser(properties);
+        if (parser.isRightSqlType(sSql))
+        {
+            return parser;
+        }
+        throw new Exception("不支持的SQL类型，请将SQL发给作者（guo7892000@126.com），后续版本增加支持！！");
     }
 }

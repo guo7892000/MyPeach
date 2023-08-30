@@ -2,6 +2,7 @@ package org.breezee.mypeach.entity;
 
 import org.breezee.mypeach.config.SqlKeyConfig;
 import org.breezee.mypeach.config.StaticConstants;
+import org.breezee.mypeach.utils.ToolHelper;
 
 import java.util.*;
 
@@ -17,6 +18,7 @@ import java.util.*;
  *    2023/08/04 BreezeeHui 键设置增加优先使用配置项（F）的支持，即当一个键出现多次时，优先使用该配置内容。
  *    2023/08/13 BreezeeHui 键设置增加默认值、不加引号。
  *    2023/08/18 BreezeeHui 字符比较忽略大小写（以equalsIgnoreCase 代替 equals）。子配置支持支持-&@|分隔
+ *    2023/08/30 BreezeeHui 针对默认值，如配置为不加引号，那么也把值中的引号去掉。
  */
 public class KeyMoreInfo {
     /**
@@ -39,9 +41,13 @@ public class KeyMoreInfo {
      */
     String inString;
     /// <summary>
+    /// In条件中的列名：注列名也可以是有函数转换，虽然那样的SQL不推荐
+    /// </summary>
+    String InColumnName = "";
+    /// <summary>
     /// 默认值：示例：D-默认值-R-N
     /// </summary>
-    public String DefaultValue = "";
+    String DefaultValue = "";
 
     /// <summary>
     /// 是否默认值不加引号：默认都加上。不要时可设置为ture
@@ -57,6 +63,27 @@ public class KeyMoreInfo {
     boolean IsNoQuotationMark = false;
     //是否必须替换（有些键不做参数化时使用）
     boolean mustValueReplace = false;
+
+    public String getInColumnName() {
+        return InColumnName;
+    }
+
+    public void setInColumnName(String inColumnName) {
+        InColumnName = inColumnName;
+    }
+
+    public int getPerInListMax() {
+        return PerInListMax;
+    }
+
+    public void setPerInListMax(int perInListMax) {
+        PerInListMax = perInListMax;
+    }
+
+    /// <summary>
+    /// 每次In清单项最大值，超过该值后会拆分成多个OR IN ('','')
+    /// </summary>
+    int PerInListMax = 0;
 
     public boolean isDefaultValueNoQuotationMark() {
         return IsDefaultValueNoQuotationMark;
@@ -155,8 +182,14 @@ public class KeyMoreInfo {
                 moreInfo.setFirst(true);//是否优先使用本配置
             }else if(SqlKeyConfig.STRING_LIST.equalsIgnoreCase(sOne)){
                 listConvert(objValue, moreInfo,true);//字符列表
+                if (sMoreArr.length > 1) {
+                    moreInfo.PerInListMax = ToolHelper.getInt(sMoreArr[1],0);
+                }
             } else if(SqlKeyConfig.INTEGE_LIST.equalsIgnoreCase(sOne)){
                 listConvert(objValue, moreInfo,false);//整型列表
+                if (sMoreArr.length > 1) {
+                    moreInfo.PerInListMax = ToolHelper.getInt(sMoreArr[1],0);
+                }
             }else if(SqlKeyConfig.V_DEFAULT.equalsIgnoreCase(sOne)){
                 for (int j = 1; j < sMoreArr.length; j++) {
                     if (j == 1) {
@@ -167,6 +200,7 @@ public class KeyMoreInfo {
                         }
                         if (SqlKeyConfig.V_NO_QUOTATION_MARK.equalsIgnoreCase(sMoreArr[j].trim())) {
                             moreInfo.setDefaultValueNoQuotationMark(true);//默认值不加引号
+                            moreInfo.setDefaultValue(moreInfo.getDefaultValue().replace("'", "").trim()); //去掉默认值中的引号
                         }
                     }
                 }

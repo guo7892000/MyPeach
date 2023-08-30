@@ -24,6 +24,7 @@ public class ToolHelper {
      * @return
      */
     public static boolean IsNotNull(Object obj){
+
         return obj != null &&  !String.valueOf(obj).trim().isEmpty();
     }
 
@@ -100,5 +101,22 @@ public class ToolHelper {
         sSql = sSql.endsWith(")")?sSql.substring(0,sSql.length()-1):sSql;
 
         return sSql;
+    }
+
+    /// <summary>
+    /// 获取整型值
+    /// </summary>
+    /// <param name="sInt">要转换的字符</param>
+    /// <param name="iDefault">默认值</param>
+    /// <returns>根据传入字符转换，成功则取转换后值，否则取默认值</returns>
+    public static int getInt(String sInt,int iDefault) {
+        int result;
+        try {
+            result = Integer.parseInt(sInt);
+        }
+        catch (Exception e) {
+            result = iDefault;
+        }
+        return result;
     }
 }

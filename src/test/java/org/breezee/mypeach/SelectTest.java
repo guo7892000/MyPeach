@@ -126,4 +126,43 @@ public class SelectTest {
         //System.out.println(result.getMessage());
         System.out.println(result.getSql());
     }
+
+    @Test
+    void InList() throws IOException {
+        String sSql = new String(Files.readAllBytes(Paths.get(testFilePrefix + "05_InList.txt")));
+        Map<String, Object> dicQuery = new HashMap<>();
+        //dicQuery.put("PROVINCE_ID","张三");
+        dicQuery.put("#PROVINCE_CODE#","BJ");
+        dicQuery.put("#PROVINCE_NAME#","北京");
+        dicQuery.put("#DATE#","20222-02-10");
+        dicQuery.put("NAME",1);
+        dicQuery.put("SORT_ID",20);
+        dicQuery.put("#REMARK#","测试");
+        dicQuery.put("PAGE_SIZE",8);
+
+        List<Integer> list = new ArrayList<>();
+        List<Integer> list2 = new ArrayList<>();
+        List<String> list3 = new ArrayList<>();
+        for (int i = 0; i < 10; i++)
+        {
+            list.add(i);
+            list2.add(i);
+        }
+        list3.add("10");
+        list3.add("10000");
+        list3.add("10001");
+        list3.add("10400");
+
+        dicQuery.put("PROVINCE_ID_LIST", list);//传入一个数组
+        dicQuery.put("CITY_ID_LIST", list2);//传入一个数组
+        dicQuery.put("PROVINCE_CODE_LIST", list3);//传入一个数组
+
+        sqlParsers.properties.setShowDebugSql(true);
+        //sqlParsers.properties.setTargetSqlParamTypeEnum(TargetSqlParamTypeEnum.PostionParam);
+        //sqlParsers.properties.setLogSqlPath("E:\\mypeach");
+        ParserResult result = sqlParsers.parse(SqlTypeEnum.SELECT,sSql, dicQuery);
+        //System.out.println(result.getMessage());
+        System.out.println(result.getSql());
+    }
+
 }

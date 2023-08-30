@@ -1,4 +1,13 @@
 # 变更历史
+## 版本：1.2.1  发布日期：2023-08-25
+* 修正isRightSqlType判断。
+* 修正子查询或之后中有多个()转换错误问题。 
+* 修正SELECT有#参数#时转换错误问题。
+* 条件动态SQL段正则式支持中间的空格。
+* 在WithSelectConvert也要增加UnionOrUnionAllConvert处理；修正With临时表的正则中WITH为(WITH)*，因为后面的临时表是不用加WITH的；
+  匹配UNION或UNION ALL时使用while，而不是if，因为可能会有多个UNION或UNION ALL。
+* 将unionOrUnionAllConvert抽取到父类中，方便针对所有SELECT语句先做union或Union All分析。
+* 针对LS和LI，当超过自定义配置的多少项后，分拆出 AND (xx in ('','') OR xx in ('',''))。
 ## 版本：1.2.0  发布日期：2023-08-15
 * 较大改动，包括：
 * 将移除注释抽成一个独立方法RemoveSqlRemark。

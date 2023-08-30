@@ -18,6 +18,8 @@ import java.util.regex.Matcher;
  * @email: guo7892000@126.com
  * @wechat: BreezeeHui
  * @date: 2022/4/12 16:45
+ * @history:
+ *
  */
 public class UpdateSqlParser extends AbstractSqlParser {
     /**
@@ -36,7 +38,23 @@ public class UpdateSqlParser extends AbstractSqlParser {
      */
     @Override
     public String headSqlConvert(String sSql) {
-        return dealUpdateSetItem(sSql);
+        StringBuilder sb = new StringBuilder();
+        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.updateSetPattern);//先截取UPDATE SET部分
+        if(mc.find()) {
+            sqlTypeEnum = SqlTypeEnum.UPDATE;
+            sb.append(mc.group());//不变的UPDATE SET部分先加入
+            sSql = sSql.substring(mc.end()).trim();
+            //调用From方法
+            String sFinalSql = fromWhereSqlConvert(sSql,false); //注：更新的条件也不可能会有UNION或UNION ALL
+            //如果禁用全表更新，并且条件为空，则抛错！
+            if (ToolHelper.IsNull(sFinalSql) && myPeachProp.isForbidAllTableUpdateOrDelete()) {
+                mapError.put("出现全表更新，已停止", "更新语句不能没有条件，那样会更新整张表数据！");//错误列表
+            }
+            sb.append(sFinalSql);
+        } else {
+            sqlTypeEnum = SqlTypeEnum.Unknown;
+        }
+        return sb.toString();
     }
 
     /**
@@ -45,26 +63,7 @@ public class UpdateSqlParser extends AbstractSqlParser {
      * @return
      */
     protected String beforeFromConvert(String sSql){
-        StringBuilder sb = new StringBuilder();
-        String[] sSetArray = sSql.split(",");
-        String sComma="";
-        for (String col:sSetArray) {
-            if(!hasKey(col)){
-                sb.append(sComma + col);
-                sComma = ",";
-                continue;
-            }
-
-            sb.append(complexParenthesesKeyConvert(sComma + col,""));
-
-            if(sComma.isEmpty()){
-                String sKey = getFirstKeyName(col);
-                if(mapSqlKeyValid.containsKey(sKey)){
-                    sComma = ",";
-                }
-            }
-        }
-        return sb.toString();
+        return dealUpdateSetItem(sSql);
     }
 
     /**

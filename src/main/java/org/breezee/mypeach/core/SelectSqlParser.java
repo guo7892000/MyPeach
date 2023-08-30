@@ -5,8 +5,6 @@ import org.breezee.mypeach.config.StaticConstants;
 import org.breezee.mypeach.enums.SqlTypeEnum;
 import org.breezee.mypeach.utils.ToolHelper;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.regex.Matcher;
 
 /**
@@ -16,6 +14,9 @@ import java.util.regex.Matcher;
  * @email: guo7892000@126.com
  * @wechat: BreezeeHui
  * @date: 2022/4/12 16:45
+ * @history:
+ *   2023/08/25 BreezeeHui 抽取UnionOrUnionAllConvert方法；在WithSelectConvert也要增加UnionOrUnionAllConvert处理；修正With临时表的正则中WITH为(WITH)*，
+ *      因为后面的临时表是不用加WITH的；匹配UNION或UNION ALL时使用while，而不是if，因为会有多个UNION或UNION ALL。
  */
 public class SelectSqlParser extends AbstractSqlParser {
     /**
@@ -35,25 +36,21 @@ public class SelectSqlParser extends AbstractSqlParser {
     @Override
     protected String headSqlConvert(String sSql) {
         StringBuilder sbHead = new StringBuilder();
-        sSql = withSelectConvert(sSql,sbHead);
-        //UNION和UNION ALL处理
-        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.unionAllPartner);
-        int iStart=0;
-        while(mc.find()){
-            String sOne = sSql.substring(iStart,mc.start());
-            String sConvertSql = queryHeadSqlConvert(sOne,false);
-            sbHead.append(sConvertSql);
-            iStart = mc.end();
-            sbHead.append(mc.group());
+        //with...as...select的处理
+        sSql = withSelectConvert(sSql, sbHead);
+        if (ToolHelper.IsNull(sSql))
+        {
+            return sbHead.toString();//当是WITH...INSERT INTO...SELECT...方式且已处理，则返回处理过的SQL
         }
-        if(iStart>0){
-            String sOne = sSql.substring(iStart);
-            String sConvertSql = queryHeadSqlConvert(sOne,false);
-            sbHead.append(sConvertSql);
-        }else {
-            String sConvertSql = queryHeadSqlConvert(sSql,false);
-            sbHead.append(sConvertSql);//通用的以Select开头的处理
+        //UNION 或 UNION ALL的处理
+        sSql = unionOrUnionAllConvert(sSql, sbHead);
+        if (ToolHelper.IsNull(sSql))
+        {
+            return sbHead.toString();
         }
+        //正常的SELECT处理
+        String sConvertSql = queryHeadSqlConvert(sSql, false);
+        sbHead.append(sConvertSql);//通用的以Select开头的处理
         return sbHead.toString();
     }
 
@@ -66,20 +63,31 @@ public class SelectSqlParser extends AbstractSqlParser {
     private String withSelectConvert(String sSql, StringBuilder sbHead) {
         Matcher mc = ToolHelper.getMatcher(sSql, withSelectPartn);
         int iStart = 0;
-        if(mc.find()) {
+        while (mc.find()) {
+            //因为会存在多个临时表，所以这里必须用while
             sqlTypeEnum = SqlTypeEnum.SELECT_WITH_AS;
-            String sOneSql = complexParenthesesKeyConvert(mc.group(),"");//##序号##处理
+            String sOneSql = complexParenthesesKeyConvert(mc.group(), "");//##序号##处理
             sbHead.append(sOneSql);
             iStart = mc.end();
-        }else{
-            sqlTypeEnum = SqlTypeEnum.Unknown;
         }
-        if(iStart>0) {
+        if (iStart > 0) {
+            //处理with...select剩余部分SQL
             sbHead.append(System.lineSeparator());
             sSql = sSql.substring(iStart).trim();//去掉之前处理过的部分
-            sSql = queryHeadSqlConvert(sSql,true);//通用的以Select开头的处理
+            //with...select...也存在UNION或UNION ALL的情况，所以这里要调用UNION或UNION ALL处理
+            sSql = unionOrUnionAllConvert(sSql, sbHead);
+            if (ToolHelper.IsNull(sSql)) {
+                return "";
+            }
+            else {
+                //非UNION且非UNION ALL的处理
+                String sConvertSql = queryHeadSqlConvert(sSql, false);
+                sbHead.append(sConvertSql);//通用的以Select开头的处理
+                return "";
+            }
+        } else {
+            return sSql;//返回未处理的SQL
         }
-        return sSql;//还需要处理的SQL
     }
 
     /**
@@ -106,6 +114,11 @@ public class SelectSqlParser extends AbstractSqlParser {
             return true;
         }
         mc = ToolHelper.getMatcher(sSql, withSelectPartn);
+        if (mc.find())
+        {
+            return true;
+        }
+        mc = ToolHelper.getMatcher(sSql, StaticConstants.selectPattern);
         if (mc.find())
         {
             return true;

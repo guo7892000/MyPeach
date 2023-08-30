@@ -80,16 +80,20 @@ public class InsertSqlParser extends AbstractSqlParser {
     /// </summary>
     /// <param name="sSql"></param>
     /// <returns></returns>
-    private String withInsertIntoSelect(String sSql,StringBuilder sbHead)
-    {;
+    private String withInsertIntoSelect(String sSql,StringBuilder sbHead) {;
         Matcher mc = ToolHelper.getMatcher(sSql, withInsertIntoSelectPartn);//抽取出INSERT INTO TABLE_NAME(部分
-        while (mc.find())
-        {
+        while (mc.find()) {
             sqlTypeEnum = SqlTypeEnum.WITH_INSERT_SELECT;
             String sInsert = sSql.substring(0, mc.start()) + mc.group();
             sInsert = complexParenthesesKeyConvert(sInsert, "");
-            sbHead.append(sInsert);//不变的INSERT INTO TABLE_NAME(部分先加入
+            sbHead.append(sInsert + System.lineSeparator());
             sSql = sSql.substring(mc.end()).trim();
+            //UNION 或 UNION ALL的处理
+            sSql = unionOrUnionAllConvert(sSql, sbHead);
+            if (ToolHelper.IsNull(sSql)) {
+                return "";
+            }
+            //非UNION 且 非UNION ALL的处理
             //FROM段处理
             String sFinalSql = fromWhereSqlConvert(sSql, false);
             sbHead.append(sFinalSql);
@@ -103,16 +107,20 @@ public class InsertSqlParser extends AbstractSqlParser {
     /// </summary>
     /// <param name="sSql"></param>
     /// <returns></returns>
-    private String insertIntoWithSelect(String sSql, StringBuilder sbHead)
-    {
-        Matcher mc = ToolHelper.getMatcher(sSql, insertIntoWithSelectPartn);//抽取出INSERT INTO TABLE_NAME(部分
-        while (mc.find())
-        {
+    private String insertIntoWithSelect(String sSql, StringBuilder sbHead) {
+        Matcher mc = ToolHelper.getMatcher(sSql, insertIntoWithSelectPartn);
+        while (mc.find()) {
             sqlTypeEnum = SqlTypeEnum.INSERT_WITH_SELECT;
             String sInsert = sSql.substring(0, mc.start()) + mc.group();
             sInsert = complexParenthesesKeyConvert(sInsert, "");
-            sbHead.append(sInsert);//不变的INSERT INTO TABLE_NAME(部分先加入
+            sbHead.append(sInsert + System.lineSeparator());
             sSql = sSql.substring(mc.end()).trim();
+            //UNION 或 UNION ALL的处理
+            sSql = unionOrUnionAllConvert(sSql, sbHead);
+            if (ToolHelper.IsNull(sSql)) {
+                return sbHead.toString();
+            }
+            //非UNION 且 非UNION ALL的处理
             //FROM段处理
             String sFinalSql = fromWhereSqlConvert(sSql, false);
             sbHead.append(sFinalSql);
@@ -144,14 +152,21 @@ public class InsertSqlParser extends AbstractSqlParser {
             sqlTypeEnum = SqlTypeEnum.INSERT_VALUES;
         }else{
             //4、INSERT INTO TABLE_NAME 。。 SELECT形式
-            mc = ToolHelper.getMatcher(sSql, StaticConstants.commonSelectPattern);//抽取出INSERT INTO TABLE_NAME(部分
+            mc = ToolHelper.getMatcher(sSql, StaticConstants.commonSelectPattern);
             if (mc.find())
             {
                 sqlTypeEnum = SqlTypeEnum.INSERT_SELECT;
-                String sInsert = sSql.substring(0, mc.start()) + mc.group();
+                String sInsert = sSql.substring(0, mc.start());
                 sInsert = complexParenthesesKeyConvert(sInsert, "");
-                sbHead.append(sInsert);//不变的INSERT INTO TABLE_NAME(部分先加入
-                sSql = sSql.substring(mc.end()).trim();
+                sbHead.append(sInsert);
+                sSql = mc.group() + sSql.substring(mc.end()).trim();
+                //UNION 或 UNION ALL的处理
+                sSql = unionOrUnionAllConvert(sSql, sbHead);
+                if (ToolHelper.IsNull(sSql))
+                {
+                    return sbHead.toString();
+                }
+                //非UNION 且 非UNION ALL的处理
                 //FROM段处理
                 String sFinalSql = fromWhereSqlConvert(sSql, false);
                 sbHead.append(sFinalSql);
@@ -163,7 +178,7 @@ public class InsertSqlParser extends AbstractSqlParser {
             return sbHead.toString();
         }
         sb.append(sbHead.toString()+sbTail.toString());
-        return sSql;
+        return sb.toString();
     }
 
     /**
@@ -174,25 +189,29 @@ public class InsertSqlParser extends AbstractSqlParser {
     @Override
     public  boolean isRightSqlType(String sSql)
     {
-        Matcher mc = ToolHelper.getMatcher(sSql, withInsertIntoSelectPartn);//抽取出INSERT INTO TABLE_NAME(部分
+        Matcher mc = ToolHelper.getMatcher(sSql, withInsertIntoSelectPartn);
         if (mc.find())
         {
             return true;
         }
-        mc = ToolHelper.getMatcher(sSql, insertIntoWithSelectPartn);//抽取出INSERT INTO TABLE_NAME(部分
+        mc = ToolHelper.getMatcher(sSql, insertIntoWithSelectPartn);
         if (mc.find())
         {
             return true;
         }
-        mc = ToolHelper.getMatcher(sSql, StaticConstants.valuesPattern);//抽取出INSERT INTO TABLE_NAME(部分
-        if (mc.find())
-        {
-            return true;
-        }
-        mc = ToolHelper.getMatcher(sSql, StaticConstants.commonSelectPattern);//抽取出INSERT INTO TABLE_NAME(部分
-        if (mc.find())
-        {
-            return true;
+        //Insert into...
+        mc = ToolHelper.getMatcher(sSql, StaticConstants.insertIntoPattern);
+        if (mc.find()){
+            mc = ToolHelper.getMatcher(sSql, StaticConstants.valuesPattern);
+            if (mc.find())
+            {
+                return true;
+            }
+            mc = ToolHelper.getMatcher(sSql, StaticConstants.commonSelectPattern);
+            if (mc.find())
+            {
+                return true;
+            }
         }
         return false;
     }

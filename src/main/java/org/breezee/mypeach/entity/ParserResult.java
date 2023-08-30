@@ -136,7 +136,7 @@ public class ParserResult {
     }
 
     public static ParserResult success(String sSql,Map<String, SqlKeyValueEntity> queryMap,Map<String, Object> mapObject,Map<String, String> mapString,ArrayList pCondition){
-        return success("SQL转换成功，有效条件请见mapQuery集合！",sSql,queryMap,mapObject,mapString,pCondition);
+        return success("SQL转换成功，有效条件请见Query集合！",sSql,queryMap,mapObject,mapString,pCondition);
     }
 
     public static ParserResult fail(String msg,Map<String, String> errMap){

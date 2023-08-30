@@ -11,6 +11,7 @@ package org.breezee.mypeach.config;
  *   2023/08/04 BreezeeHui 修改remarkPatter正则式，对/**\/中间应该可以包括换行符
  *   2023/08/14 BreezeeHui 增加MERGE INTO的正则式
  *   2023/08/20 BreezeeHui 进一步完善和优化键配置、动态参数的正则式
+ *   2023/08/24 BreezeeHui 动态参数的正则式支持中间加空格
  */
 public class StaticConstants {
     public static final String parenthesesRoundKey = "##";
@@ -113,9 +114,12 @@ public class StaticConstants {
 
     //动态参数（支持{}、[]与连接符(&-@|)任意组合）：示例：  /***@MP&DYN {[id=1]}& {[A.ID,B.ID]}  @MP&DYN****/
     public static final String dynConditionKeyPre = "@MP&DYN&KEY:";//动态参数的键前缀
-    public static final String dynSqlSegmentConfigPatternCenter = "\\]\\s*\\}\\s*[&\\-,;，；]+\\s*\\{\\s*\\[\\s*";//动态条件SQL段配置正则式
-    public static final String dynSqlSegmentConfigPatternLeft = "\\s*[\\[\\{]+\\s*";//动态条件SQL段配置正则式_左边
-    public static final String dynSqlSegmentConfigPatternRight = "\\s*[\\]\\}]+\\s*";//动态条件SQL段配置正则式_右边
+    public static final String dynSqlSegmentConfigPatternCenter = "[\\]\\}\\s]+\\s*[&\\-@\\|]+\\s*[\\{\\[\\s]+\\s*";//动态条件SQL段配置正则式_中间段
+    public static final String dynSqlSegmentConfigPatternLeft = "\\s*([\\[\\{]+\\s*)+";//动态条件SQL段配置正则式_左边
+    public static final String dynSqlSegmentConfigPatternRight = "\\s*([\\]\\}]+\\s*)+";//动态条件SQL段配置正则式_右边
+    //动态参数中的IN和NOT IN正则式
+    public static final String dynSqlSegmentNotInPattern = "\\s+NOT\\s+IN\\s+\\(";
+    public static final String dynSqlSegmentInPattern = "\\s+IN\\s+\\(";
 
     //键正则式（支持中间的空格）：针对#{}()-'都要加上转义符，否则会报错！！
     //键大类支持中英文冒号(:：)、分号(;；)分隔，小类支持横杆(-)、竖线(|)、与(&)、电邮字符（@）分隔
@@ -126,7 +130,7 @@ public class StaticConstants {
 
     public static final String keyBigTypeSpit = ":|：|;|；"; // new char[] { ':', '：', ';', '；' }; //键配置大类
     public static final String keySmallTypeSpit = "-|&|@|\\|";  //new char[] { '-', '&', '@', '|' }; //键配置小类
-    //IN和NOT IN正则式
-    public static final String notInPattern = "\\s+NOT\\s+IN\\s+\\(";
-    public static final String inPattern = "\\s+IN\\s+\\(";
+    //IN正则式：IN可以在WHERE后面，也可以在AND或者OR后面
+    public static final String inPattern = "(WHERE|AND|OR|\\()\\s+.+\\s+IN\\s+";
+    public static final String onlyInPattern = "\\s+IN\\s+"; //仅包含IN并且左右有空格的IN
 }
