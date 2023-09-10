@@ -19,6 +19,7 @@ import java.util.*;
  *    2023/08/13 BreezeeHui 键设置增加默认值、不加引号。
  *    2023/08/18 BreezeeHui 字符比较忽略大小写（以equalsIgnoreCase 代替 equals）。子配置支持支持-&@|分隔
  *    2023/08/30 BreezeeHui 针对默认值，如配置为不加引号，那么也把值中的引号去掉。
+ *    2023/09/10 BreezeeHui 增加SqlKeyValueEntity传入，设置是否值不加引号。
  */
 public class KeyMoreInfo {
     /**
@@ -162,7 +163,7 @@ public class KeyMoreInfo {
      * @param sKeyMore 键更多信息字符，例如：CITY_NAME:N:R
      * @return
      */
-    public static KeyMoreInfo build(String sKeyMore, Object objValue){
+    public static KeyMoreInfo build(String sKeyMore, Object objValue,SqlKeyValueEntity sqlKeyValueEntity){
         KeyMoreInfo moreInfo = new KeyMoreInfo();
         //配置大类分隔
         String[] arr = sKeyMore.split(StaticConstants.keyBigTypeSpit);
@@ -182,11 +183,13 @@ public class KeyMoreInfo {
                 moreInfo.setFirst(true);//是否优先使用本配置
             }else if(SqlKeyConfig.STRING_LIST.equalsIgnoreCase(sOne)){
                 listConvert(objValue, moreInfo,true);//字符列表
+                sqlKeyValueEntity.setHasSingleQuotes(true);
                 if (sMoreArr.length > 1) {
                     moreInfo.PerInListMax = ToolHelper.getInt(sMoreArr[1],0);
                 }
             } else if(SqlKeyConfig.INTEGE_LIST.equalsIgnoreCase(sOne)){
                 listConvert(objValue, moreInfo,false);//整型列表
+                sqlKeyValueEntity.setHasSingleQuotes(false);
                 if (sMoreArr.length > 1) {
                     moreInfo.PerInListMax = ToolHelper.getInt(sMoreArr[1],0);
                 }
