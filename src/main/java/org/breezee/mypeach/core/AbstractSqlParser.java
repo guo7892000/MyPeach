@@ -993,13 +993,17 @@ public abstract class AbstractSqlParser {
         return sb.toString();
     }
 
+    protected String complexParenthesesKeyConvert(String sSql, String sLastAndOr){
+        return complexParenthesesKeyConvert(sSql,sLastAndOr,false);
+    }
     /**
      * 复杂的括号键转换处理：
      *  之前为了降低复杂度，将包含()的子查询或函数替换为##序号##，这里需要取出来分析
      * @param sSql 包含##序号##的SQL
      * @param sLastAndOr 上次处理中最后的那个AND或OR字符
+     * @param isSingleColumnDeal 是否单个字段处理，如查询列中也可能包含参数，无没有则直接跳过
      */
-    protected String complexParenthesesKeyConvert(String sSql, String sLastAndOr){
+    protected String complexParenthesesKeyConvert(String sSql, String sLastAndOr,boolean isSingleColumnDeal){
         StringBuilder sb = new StringBuilder();
         String sValue = "";
         //1、分析是否有包含 ##序号## 正则式的字符
@@ -1054,6 +1058,22 @@ public abstract class AbstractSqlParser {
             String sPre = sSql.substring(iLastStart, mc.start());
             iLastStart = mc.end();
             String sEnd = sSql.substring(iLastStart); //注：后续部分还可能用##序号##
+
+            //查询单列的动态处理
+            if (isSingleColumnDeal)
+            {
+                if (!hasKey(sSource))
+                {
+                    return sPre + sSource + sEnd; //无键时直接返回
+                }
+
+                String sSingleKeyName = getFirstKeyName(sSource);
+                if (!mapSqlKeyValid.containsKey(sSingleKeyName))
+                {
+                    return ""; //没有值传入，直接返回空
+                }
+                return sPre + singleKeyConvert(sSource) + sEnd;
+            }
 
             //3、子查询处理
             String sChildQuery = childQueryConvert(sLastAndOr + sPre, "", sSource); //这里先不把结束字符加上
@@ -1375,14 +1395,24 @@ public abstract class AbstractSqlParser {
                 continue;
             }
             //括号转换处理
-            String colString = complexParenthesesKeyConvert(sComma + col,"");
-            sb.append(colString);
-            //第一个有效元素后的元素前要加逗号：查询的字段应该是不能去掉的，回头这再看看？？？
-            if(sComma.isEmpty()){
-                String sKey = getFirstKeyName(col);
-                if(mapSqlKeyValid.containsKey(sKey)){
-                    sComma = ",";
-                }
+            String colString = complexParenthesesKeyConvert(sComma + col, "", true);
+            if(!hasKey(colString))
+            {
+                sb.append(colString);
+                sComma = ",";
+                continue;
+            }
+
+            String sKey = getFirstKeyName(colString);
+            if (mapSqlKeyValid.containsKey(sKey))
+            {
+                sb.append(singleKeyConvert(colString));
+                sComma = ",";
+            }
+
+            if (sComma.isEmpty())
+            {
+                sComma = ",";
             }
         }
 
