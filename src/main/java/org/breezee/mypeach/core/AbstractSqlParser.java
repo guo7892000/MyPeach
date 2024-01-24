@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
  *   2023/08/24 BreezeeHui 修正子查询或之后中有多个()转换错误问题；修正SELECT有#参数#时转换错误问题；修正WITH正则式。
  *   2023/08/25 BreezeeHui 将unionOrUnionAllConvert抽取到父类中，方便针对所有SELECT语句先做union或Union All分析。
  *   2023/08/30 BreezeeHui 增加对IN配置多少项（默认1000）后分拆成AND (XX IN ('值1','值2') OR XX IN ('值N1','值N2'))。
+ *   2024/01/24 BreezeeHui 修正当没有WHERE条件时无法转换问题。
  */
 public abstract class AbstractSqlParser {
 
@@ -734,10 +735,10 @@ public abstract class AbstractSqlParser {
         String sFromWhere = "";
 
         //分隔FROM段
-        Matcher mc = ToolHelper.getMatcher(sSql, StaticConstants.fromPattern);
+        Matcher mcFrom = ToolHelper.getMatcher(sSql, StaticConstants.fromPattern);
         boolean isDealWhere = false;
         //因为只会有一个FROM，所以这里不用WHILE，而使用if
-        if(!mc.find()){
+        if(!mcFrom.find()){
             //1。没有FROM语句
             String sFinalWhere = whereConvert(sSql);
             sb.append(sFinalWhere);
@@ -745,8 +746,8 @@ public abstract class AbstractSqlParser {
         }
 
         //2.有FROM，及之后可能存在的WHERE段处理
-        sSet = sSql.substring(0, mc.start()).trim();
-        sFromWhere = sSql.substring(mc.end()).trim();
+        sSet = sSql.substring(0, mcFrom.start()).trim();
+        sFromWhere = sSql.substring(mcFrom.end()).trim();
 
         //1、查询语句中查询的字段，或更新语句中的更新项
         if(childQuery){
@@ -757,18 +758,47 @@ public abstract class AbstractSqlParser {
             sb.append(sFinalBeforeFrom);//由子类来处理
         }
 
-        sb.append(mc.group());//sbHead添加FROM字符
+        sb.append(mcFrom.group());//sbHead添加FROM字符
 
         //2、WHERE段分隔
         Matcher mcWhere = ToolHelper.getMatcher(sFromWhere, StaticConstants.wherePattern);
+        String sFrom = "";//
+        String sWhere = "";
         //因为只会有一个FROM，所以这里不用WHILE，而使用if
         if (!mcWhere.find()) {
-            return sb.toString() + sFromWhere;//没有WHERE段，则直接返回
+            //没有WHERE段：但后面可能有GROUP BY或ORDER BY或LIMI等项，需要进一步匹配，从而确定FROM段和FROM段字符
+            //GROUP BY的处理
+            Matcher mcGroupBy = ToolHelper.getMatcher(sSql, StaticConstants.groupByPattern);
+            if (mcGroupBy.find()) {
+                sFrom = sSql.substring(mcFrom.end(), mcGroupBy.start());
+                sWhere = mcGroupBy.group() + sSql.substring(mcGroupBy.end());
+            } else {
+                //ORDER BY的处理
+                Matcher mcOrder = ToolHelper.getMatcher(sSql, StaticConstants.orderByPattern);
+                if (mcOrder.find()) {
+                    sFrom = sSql.substring(mcFrom.end(), mcOrder.start());
+                    sWhere = mcOrder.group() + sSql.substring(mcOrder.end());
+                } else {
+                    //LIMIT的处理
+                    Matcher mcLimit = ToolHelper.getMatcher(sSql, StaticConstants.limitPattern);
+                    if (mcLimit.find()) {
+                        sFrom = sSql.substring(mcFrom.end(), mcLimit.start());
+                        sWhere = mcLimit.group() + sSql.substring(mcLimit.end());
+                    } else {
+                        //没有GROUP BY、ORDER BY、LIMIT，那么就相当于只有FROM段的内容
+                        sFrom = sSql.substring(mcFrom.end());
+                        sWhere = "";
+                    }
+                }
+            }
         }
-        //3、FROM段的处理
-        String sFrom = sFromWhere.substring(0,mcWhere.start());//
-        String sWhere = sFromWhere.substring(mcWhere.end()- mcWhere.group().length());
+        else
+        {
+            sFrom = sFromWhere.substring(0, mcWhere.start());//
+            sWhere = sFromWhere.substring(mcWhere.end() - mcWhere.group().length());
+        }
 
+        //3、FROM段的处理
         if(!hasKey(sFrom)){
             //FROM段没有参数时，直接拼接
             sb.append(sFrom);
